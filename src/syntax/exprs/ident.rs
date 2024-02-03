@@ -18,7 +18,6 @@ impl Parse for ExprIdent {
 
 impl DisplayTree for ExprIdent {
     fn display(&self, layer: usize) {
-        branch("IdentExpr", layer);
-        self.ident.display(layer + 1);
+        branch(&format!("IdentExpr: {}", self.ident.name()), layer);
     }
 }

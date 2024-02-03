@@ -1,25 +1,26 @@
+use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
-use crate::syntax::exprs::expr::Expr;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
+use crate::syntax::symbols::r#break::Break;
 use crate::syntax::symbols::semicolon::Semicolon;
 
-pub struct StmtExpr {
-    expr: Expr,
+pub struct StmtBreak {
+    _return: Break,
     _semicolon: Semicolon,
 }
 
-impl Parse for StmtExpr {
+impl Parse for StmtBreak {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        Ok(Self {
-            expr: input.parse()?,
+        Ok(StmtBreak {
+            _return: input.parse()?,
             _semicolon: input.parse()?,
         })
     }
 }
 
-impl DisplayTree for StmtExpr {
+impl DisplayTree for StmtBreak {
     fn display(&self, layer: usize) {
-        self.expr.display(layer);
+        branch("BreakStmt", layer);
     }
 }

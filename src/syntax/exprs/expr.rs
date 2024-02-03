@@ -7,7 +7,10 @@ use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
 
+use super::assign::ExprAssign;
 use super::binary::ExprBinary;
+use super::call::ExprCall;
+use super::get::ExprGet;
 use super::ident::ExprIdent;
 use super::lit::ExprLit;
 use super::paren::ExprParen;
@@ -19,11 +22,33 @@ pub enum Expr {
     Unary(ExprUnary),
     Binary(ExprBinary),
     Paren(ExprParen),
+    Get(ExprGet),
+    Call(ExprCall),
+    Assign(ExprAssign),
 }
 
 impl Parse for Expr {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         ambiguous_expr(input)
+    }
+}
+
+impl Parse for Vec<Expr> {
+    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+        let mut exprs = vec![];
+
+        if input.peek() == token!(')') {
+            Ok(exprs)
+        } else {
+            exprs.push(input.parse()?);
+
+            while input.peek() == token!(,) {
+                input.expect(token!(,))?;
+                exprs.push(input.parse()?);
+            }
+
+            Ok(exprs)
+        }
     }
 }
 
@@ -41,12 +66,40 @@ impl DisplayTree for Expr {
             Self::Lit(lit) => lit.display(layer),
             Self::Paren(paren) => paren.display(layer),
             Self::Unary(un) => un.display(layer),
+            Self::Get(get) => get.display(layer),
+            Self::Call(call) => call.display(layer),
+            Self::Assign(assign) => assign.display(layer),
+        }
+    }
+}
+
+impl DisplayTree for Vec<Expr> {
+    fn display(&self, layer: usize) {
+        for expr in self {
+            expr.display(layer);
         }
     }
 }
 
 fn ambiguous_expr(input: &mut ParseStream) -> Result<Expr, String> {
-    equality(input)
+    assignment(input)
+}
+
+fn assignment(input: &mut ParseStream) -> Result<Expr, String> {
+    let mut expr = equality(input)?;
+
+    if input.peek() == token!(=) {
+        let operator = input.parse()?;
+        let right = assignment(input)?;
+
+        expr = Expr::Assign(ExprAssign {
+            left: Box::new(expr),
+            operator,
+            right: Box::new(right),
+        })
+    }
+
+    Ok(expr)
 }
 
 fn equality(input: &mut ParseStream) -> Result<Expr, String> {
@@ -67,13 +120,30 @@ fn equality(input: &mut ParseStream) -> Result<Expr, String> {
 }
 
 fn comparison(input: &mut ParseStream) -> Result<Expr, String> {
-    let mut left: Expr = term(input)?;
+    let mut left: Expr = range(input)?;
 
     while input.peek() == token!(>)
         || input.peek() == token!(>=)
         || input.peek() == token!(<)
         || input.peek() == token!(<=)
     {
+        let operator = input.parse()?;
+        let right = range(input)?;
+
+        left = Expr::Binary(ExprBinary {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        });
+    }
+
+    Ok(left)
+}
+
+fn range(input: &mut ParseStream) -> Result<Expr, String> {
+    let mut left: Expr = term(input)?;
+
+    while input.peek() == token!(..) || input.peek() == token!(..=) {
         let operator = input.parse()?;
         let right = term(input)?;
 
@@ -128,8 +198,31 @@ fn unary(input: &mut ParseStream) -> Result<Expr, String> {
             expr: Box::new(primary(input)?),
         }))
     } else {
-        primary(input)
+        call(input)
     }
+}
+
+fn call(input: &mut ParseStream) -> Result<Expr, String> {
+    let mut expr = primary(input)?;
+
+    while input.peek() == token!(.) || input.peek() == token!('(') {
+        expr = match input.peek() {
+            token!('(') => Expr::Call(ExprCall {
+                callee: Box::new(expr),
+                left_paren: input.parse()?,
+                args: input.parse()?,
+                right_paren: input.parse()?,
+            }),
+            token!(.) => Expr::Get(ExprGet {
+                expr: Box::new(expr),
+                dot: input.parse()?,
+                ident: input.parse()?,
+            }),
+            _ => unreachable!(),
+        }
+    }
+
+    Ok(expr)
 }
 
 fn primary(input: &mut ParseStream) -> Result<Expr, String> {

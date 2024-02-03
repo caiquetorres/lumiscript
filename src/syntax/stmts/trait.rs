@@ -7,13 +7,13 @@ use crate::syntax::symbols::brace::RightBrace;
 use crate::syntax::symbols::ident::Ident;
 use crate::syntax::symbols::r#trait::Trait;
 
-use super::fun::StmtFunProto;
+use super::fun::StmtMethodProto;
 
 pub struct StmtTrait {
     _trait: Trait,
     ident: Ident,
     _left_brace: LeftBrace,
-    methods: Vec<StmtFunProto>,
+    methods: Vec<StmtMethodProto>,
     _right_brace: RightBrace,
 }
 
