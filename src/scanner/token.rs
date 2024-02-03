@@ -9,6 +9,7 @@ pub enum TokenKind {
     Else,
     For,
     Fun,
+    Extern,
     Let,
     Ident,
     String,
@@ -23,6 +24,7 @@ pub enum TokenKind {
     Bad,
     Dot,
     DotDot,
+    DotDotEqual,
     Plus,
     Minus,
     MinusGreater,
@@ -43,10 +45,12 @@ pub enum TokenKind {
     True,
     False,
     Return,
+    Break,
+    Continue,
     While,
-    This,
     Println,
     Print,
+    Const,
     Trait,
     Impl,
     Interrogation,
@@ -149,6 +153,9 @@ macro_rules! token {
     (..) => {
         TokenKind::DotDot
     };
+    (..=) => {
+        TokenKind::DotDotEqual
+    };
     (,) => {
         TokenKind::Comma
     };
@@ -191,8 +198,14 @@ macro_rules! token {
     (fun) => {
         TokenKind::Fun
     };
+    (extern) => {
+        TokenKind::Extern
+    };
     (let) => {
         TokenKind::Let
+    };
+    (const) => {
+        TokenKind::Const
     };
     (if) => {
         TokenKind::If
@@ -221,8 +234,11 @@ macro_rules! token {
     (return) => {
         TokenKind::Return
     };
-    (this) => {
-        TokenKind::This
+    (break) => {
+        TokenKind::Break
+    };
+    (continue) => {
+        TokenKind::Continue
     };
     (while) => {
         TokenKind::While
