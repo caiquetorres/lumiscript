@@ -131,7 +131,7 @@ impl Lexer {
         self.consume(); // /
         self.consume(); // *
 
-        while !self.at_end() && self.peek() != '*' && self.peek2() != '/' {
+        while !self.at_end() && (self.peek() != '*' || self.peek2() != '/') {
             self.consume();
         }
 
@@ -246,7 +246,18 @@ impl Iterator for Lexer {
                     self.consume();
                     if self.peek() == '.' {
                         self.consume();
-                        Some(Token::new(token!(..), Some(".."), start, self.line_column))
+
+                        if self.peek() == '=' {
+                            self.consume();
+                            Some(Token::new(
+                                token!(..=),
+                                Some("..="),
+                                start,
+                                self.line_column,
+                            ))
+                        } else {
+                            Some(Token::new(token!(..), Some(".."), start, self.line_column))
+                        }
                     } else {
                         Some(Token::new(token!(.), Some("."), start, self.line_column))
                     }
@@ -314,9 +325,21 @@ impl Iterator for Lexer {
                                 start,
                                 self.line_column,
                             )),
+                            "extern" => Some(Token::new(
+                                token!(extern),
+                                Some("extern"),
+                                start,
+                                self.line_column,
+                            )),
                             "let" => Some(Token::new(
                                 token!(let),
                                 Some("let"),
+                                start,
+                                self.line_column,
+                            )),
+                            "const" => Some(Token::new(
+                                token!(const),
+                                Some("const"),
                                 start,
                                 self.line_column,
                             )),
@@ -374,12 +397,6 @@ impl Iterator for Lexer {
                                 start,
                                 self.line_column,
                             )),
-                            "this" => Some(Token::new(
-                                token!(this),
-                                Some("this"),
-                                start,
-                                self.line_column,
-                            )),
                             "println" => Some(Token::new(
                                 token!(println),
                                 Some("println"),
@@ -395,6 +412,18 @@ impl Iterator for Lexer {
                             "impl" => Some(Token::new(
                                 token!(impl),
                                 Some("impl"),
+                                start,
+                                self.line_column,
+                            )),
+                            "break" => Some(Token::new(
+                                token!(break),
+                                Some("break"),
+                                start,
+                                self.line_column,
+                            )),
+                            "continue" => Some(Token::new(
+                                token!(continue),
+                                Some("continue"),
                                 start,
                                 self.line_column,
                             )),
