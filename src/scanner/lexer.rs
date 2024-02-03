@@ -94,7 +94,7 @@ impl Lexer {
             .unwrap_or('\0')
     }
 
-    fn read_whitespace(&mut self) {
+    fn skip_whitespace(&mut self) {
         while self.peek().is_whitespace() {
             if self.peek() == '\n' {
                 self.line_column.next_line();
@@ -106,15 +106,15 @@ impl Lexer {
         }
 
         if self.peek() == '/' && self.peek2() == '/' {
-            self.read_one_line_comment();
+            self.skip_one_line_comment();
         }
 
         if self.peek() == '/' && self.peek2() == '*' {
-            self.read_multiline_line_comment();
+            self.skip_multiline_line_comment();
         }
     }
 
-    fn read_one_line_comment(&mut self) {
+    fn skip_one_line_comment(&mut self) {
         self.consume(); // /
         self.consume(); // /
 
@@ -123,11 +123,11 @@ impl Lexer {
         }
 
         if self.peek().is_whitespace() {
-            self.read_whitespace();
+            self.skip_whitespace();
         }
     }
 
-    fn read_multiline_line_comment(&mut self) {
+    fn skip_multiline_line_comment(&mut self) {
         self.consume(); // /
         self.consume(); // *
 
@@ -139,7 +139,7 @@ impl Lexer {
         self.consume(); // /
 
         if self.peek().is_whitespace() {
-            self.read_whitespace();
+            self.skip_whitespace();
         }
     }
 }
@@ -149,15 +149,15 @@ impl Iterator for Lexer {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.peek().is_whitespace() {
-            self.read_whitespace();
+            self.skip_whitespace();
         }
 
         if self.peek() == '/' && self.peek2() == '/' {
-            self.read_one_line_comment();
+            self.skip_one_line_comment();
         }
 
         if self.peek() == '/' && self.peek2() == '*' {
-            self.read_multiline_line_comment();
+            self.skip_multiline_line_comment();
         }
 
         if self.cur > self.source_code.code().len() {
@@ -389,6 +389,18 @@ impl Iterator for Lexer {
                             "print" => Some(Token::new(
                                 token!(print),
                                 Some("print"),
+                                start,
+                                self.line_column,
+                            )),
+                            "impl" => Some(Token::new(
+                                token!(impl),
+                                Some("impl"),
+                                start,
+                                self.line_column,
+                            )),
+                            "trait" => Some(Token::new(
+                                token!(trait),
+                                Some("trait"),
                                 start,
                                 self.line_column,
                             )),
