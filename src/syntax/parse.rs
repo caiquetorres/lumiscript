@@ -65,6 +65,10 @@ impl ParseStream {
         self.tokens[self.cur].kind
     }
 
+    pub fn peek2(&self) -> TokenKind {
+        self.tokens[self.cur + 1].kind
+    }
+
     pub fn parse<T: Parse>(&mut self) -> Result<T, String> {
         T::parse(self)
     }

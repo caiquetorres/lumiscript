@@ -1,0 +1,29 @@
+use crate::syntax::display_tree::branch;
+use crate::syntax::display_tree::DisplayTree;
+use crate::syntax::exprs::expr::Expr;
+use crate::syntax::parse::{Parse, ParseStream};
+use crate::syntax::symbols::print::Print;
+use crate::syntax::symbols::semicolon::Semicolon;
+
+pub struct StmtPrint {
+    _println: Print,
+    expr: Expr,
+    _semicolon: Semicolon,
+}
+
+impl Parse for StmtPrint {
+    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+        Ok(StmtPrint {
+            _println: input.parse()?,
+            expr: input.parse()?,
+            _semicolon: input.parse()?,
+        })
+    }
+}
+
+impl DisplayTree for StmtPrint {
+    fn display(&self, layer: usize) {
+        branch("PrintlnStmt", layer);
+        self.expr.display(layer + 1);
+    }
+}
