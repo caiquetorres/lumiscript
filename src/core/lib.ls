@@ -1,31 +1,37 @@
+trait ToBool {
+    fun toBool() -> bool;
+}
+
 trait Add {
-    fun add(other: Self) -> Self;
+    fun add(other: This) -> This;
 }
 
-trait ToStr {
-    fun toStr() -> str;
+trait Sub {
+    fun sub(other: This) -> This;
 }
 
-impl Add for num {
-    fun add(other: num) -> num {
-        /* native code */
+impl ToBool for Bool {
+    extern fun toBool() -> Bool;
+}
+
+impl ToBool for Num {
+    fun toBool() -> Bool {
+        return this != 0;
     }
 }
 
-impl ToString for str {
-    fun toStr() -> str {
-        return this;
-    }
+impl Add for Num {
+    extern fun add(other: Num) -> Num;
 }
 
-impl ToString for num {
-    fun toStr() -> str {
-        /* native code */
-    }
+impl Sub for Num {
+    extern fun sub(other: Num) -> Num;
 }
 
-impl ToString for bool {
-    fun toStr() -> str {
-        /* native code */
+fun main() {
+    let a = 1 + 2;
+
+    if a {
+        let b = a - 1;
     }
 }
