@@ -227,6 +227,9 @@ macro_rules! token {
     (while) => {
         TokenKind::While
     };
+    (class) => {
+        TokenKind::Class
+    };
     (println) => {
         TokenKind::Println
     };
