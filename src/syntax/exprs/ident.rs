@@ -1,0 +1,24 @@
+use crate::syntax::display_tree::branch;
+use crate::syntax::display_tree::DisplayTree;
+use crate::syntax::parse::Parse;
+use crate::syntax::parse::ParseStream;
+use crate::syntax::symbols::ident::Ident;
+
+pub struct ExprIdent {
+    ident: Ident,
+}
+
+impl Parse for ExprIdent {
+    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+        Ok(ExprIdent {
+            ident: input.parse()?,
+        })
+    }
+}
+
+impl DisplayTree for ExprIdent {
+    fn display(&self, layer: usize) {
+        branch("IdentExpr", layer);
+        self.ident.display(layer + 1);
+    }
+}

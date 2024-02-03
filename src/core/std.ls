@@ -1,3 +1,3 @@
-fn helloWorld() {
+fun helloWorld() {
     println "Hello World!";
 }
