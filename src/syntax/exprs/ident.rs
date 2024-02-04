@@ -5,7 +5,7 @@ use crate::syntax::parse::ParseStream;
 use crate::syntax::symbols::ident::Ident;
 
 pub struct ExprIdent {
-    ident: Ident,
+    pub ident: Ident,
 }
 
 impl Parse for ExprIdent {

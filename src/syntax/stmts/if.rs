@@ -51,7 +51,7 @@ impl Parse for StmtIf {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(Self {
             _if: input.parse()?,
-            cond: input.parse()?,
+            cond: Expr::parse_without_eager_brace(input)?,
             stmt: input.parse()?,
             r#else: {
                 if input.peek() == token!(else) {

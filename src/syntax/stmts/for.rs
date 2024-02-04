@@ -21,7 +21,7 @@ impl Parse for StmtFor {
             _for: input.parse()?,
             ident: input.parse()?,
             _in: input.parse()?,
-            iter: input.parse()?,
+            iter: Expr::parse_without_eager_brace(input)?,
             stmt: input.parse()?,
         })
     }

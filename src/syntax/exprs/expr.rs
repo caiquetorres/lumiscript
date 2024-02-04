@@ -29,9 +29,21 @@ pub enum Expr {
     Class(ExprClass),
 }
 
+impl Expr {
+    pub fn parse_without_eager_brace(input: &mut ParseStream) -> Result<Self, String> {
+        ambiguous_expr(input, false)
+    }
+}
+
 impl Parse for Expr {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        ambiguous_expr(input)
+        ambiguous_expr(input, true)
+    }
+}
+
+impl Parse for Box<Expr> {
+    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+        ambiguous_expr(input, true).map(Box::new)
     }
 }
 
@@ -51,12 +63,6 @@ impl Parse for Vec<Expr> {
 
             Ok(exprs)
         }
-    }
-}
-
-impl Parse for Box<Expr> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        ambiguous_expr(input).map(Box::new)
     }
 }
 
@@ -84,16 +90,16 @@ impl DisplayTree for Vec<Expr> {
     }
 }
 
-fn ambiguous_expr(input: &mut ParseStream) -> Result<Expr, String> {
-    assignment(input)
+fn ambiguous_expr(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+    assignment(input, allow_struct)
 }
 
-fn assignment(input: &mut ParseStream) -> Result<Expr, String> {
-    let mut expr = equality(input)?;
+fn assignment(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+    let mut expr = equality(input, allow_struct)?;
 
     if input.peek() == token!(=) {
         let operator = input.parse()?;
-        let right = assignment(input)?;
+        let right = assignment(input, allow_struct)?;
 
         expr = Expr::Assign(ExprAssign {
             left: Box::new(expr),
@@ -105,12 +111,12 @@ fn assignment(input: &mut ParseStream) -> Result<Expr, String> {
     Ok(expr)
 }
 
-fn equality(input: &mut ParseStream) -> Result<Expr, String> {
-    let mut left = comparison(input)?;
+fn equality(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+    let mut left = comparison(input, allow_struct)?;
 
     while input.peek() == token!(!=) || input.peek() == token!(==) {
         let operator = input.parse()?;
-        let right = comparison(input)?;
+        let right = comparison(input, allow_struct)?;
 
         left = Expr::Binary(ExprBinary {
             left: Box::new(left),
@@ -122,8 +128,8 @@ fn equality(input: &mut ParseStream) -> Result<Expr, String> {
     Ok(left)
 }
 
-fn comparison(input: &mut ParseStream) -> Result<Expr, String> {
-    let mut left: Expr = range(input)?;
+fn comparison(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+    let mut left: Expr = range(input, allow_struct)?;
 
     while input.peek() == token!(>)
         || input.peek() == token!(>=)
@@ -131,7 +137,7 @@ fn comparison(input: &mut ParseStream) -> Result<Expr, String> {
         || input.peek() == token!(<=)
     {
         let operator = input.parse()?;
-        let right = range(input)?;
+        let right = range(input, allow_struct)?;
 
         left = Expr::Binary(ExprBinary {
             left: Box::new(left),
@@ -143,12 +149,12 @@ fn comparison(input: &mut ParseStream) -> Result<Expr, String> {
     Ok(left)
 }
 
-fn range(input: &mut ParseStream) -> Result<Expr, String> {
-    let mut left: Expr = term(input)?;
+fn range(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+    let mut left: Expr = term(input, allow_struct)?;
 
     while input.peek() == token!(..) || input.peek() == token!(..=) {
         let operator = input.parse()?;
-        let right = term(input)?;
+        let right = term(input, allow_struct)?;
 
         left = Expr::Binary(ExprBinary {
             left: Box::new(left),
@@ -160,12 +166,12 @@ fn range(input: &mut ParseStream) -> Result<Expr, String> {
     Ok(left)
 }
 
-fn term(input: &mut ParseStream) -> Result<Expr, String> {
-    let mut left = factor(input)?;
+fn term(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+    let mut left = factor(input, allow_struct)?;
 
     while input.peek() == token!(+) || input.peek() == token!(-) {
         let operator = input.parse()?;
-        let right = factor(input)?;
+        let right = factor(input, allow_struct)?;
 
         left = Expr::Binary(ExprBinary {
             left: Box::new(left),
@@ -177,12 +183,12 @@ fn term(input: &mut ParseStream) -> Result<Expr, String> {
     Ok(left)
 }
 
-fn factor(input: &mut ParseStream) -> Result<Expr, String> {
-    let mut left = unary(input)?;
+fn factor(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+    let mut left = unary(input, allow_struct)?;
 
     while input.peek() == token!(*) || input.peek() == token!(/) {
         let operator = input.parse()?;
-        let right = unary(input)?;
+        let right = unary(input, allow_struct)?;
 
         left = Expr::Binary(ExprBinary {
             left: Box::new(left),
@@ -194,21 +200,21 @@ fn factor(input: &mut ParseStream) -> Result<Expr, String> {
     Ok(left)
 }
 
-fn unary(input: &mut ParseStream) -> Result<Expr, String> {
+fn unary(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
     if input.peek() == token!(+) || input.peek() == token!(-) || input.peek() == token!(!) {
         Ok(Expr::Unary(ExprUnary {
             operator: input.parse()?,
             expr: Box::new(primary(input)?),
         }))
     } else {
-        call(input)
+        call(input, allow_struct)
     }
 }
 
-fn call(input: &mut ParseStream) -> Result<Expr, String> {
+fn call(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
     let mut expr = primary(input)?;
 
-    if input.peek() == token!('{') {
+    if input.peek() == token!('{') && allow_struct {
         Ok(Expr::Class(ExprClass {
             class: Box::new(expr),
             left_brace: input.parse()?,
@@ -241,7 +247,11 @@ fn primary(input: &mut ParseStream) -> Result<Expr, String> {
     match input.peek() {
         ident!() => Ok(Expr::Ident(input.parse()?)),
         token!(false) | token!(true) | token!(nil) | number!() => Ok(Expr::Lit(input.parse()?)),
-        token!('(') => Ok(Expr::Paren(input.parse()?)),
+        token!('(') => Ok(Expr::Paren(ExprParen {
+            left_paren: input.parse()?,
+            expr: input.parse()?,
+            right_paren: input.parse()?,
+        })),
         _ => {
             let start = input.cur().span.start;
             input.error_reporter().report("Expression expected", start);

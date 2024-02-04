@@ -1,5 +1,6 @@
 use crate::{line_column::LineColumn, scanner::token::Token};
 
+#[derive(Debug)]
 pub struct Span {
     pub source_text: String,
     pub start: LineColumn,

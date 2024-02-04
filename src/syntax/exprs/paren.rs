@@ -7,17 +7,17 @@ use crate::syntax::symbols::paren::RightParen;
 use super::expr::Expr;
 
 pub struct ExprParen {
-    _left_paren: LeftParen,
-    expr: Box<Expr>,
-    _right_paren: RightParen,
+    pub left_paren: LeftParen,
+    pub expr: Box<Expr>,
+    pub right_paren: RightParen,
 }
 
 impl Parse for ExprParen {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(ExprParen {
-            _left_paren: input.parse()?,
+            left_paren: input.parse()?,
             expr: input.parse()?,
-            _right_paren: input.parse()?,
+            right_paren: input.parse()?,
         })
     }
 }

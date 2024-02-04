@@ -83,9 +83,11 @@ impl Parse for Vec<FieldInit> {
 
 impl DisplayTree for Vec<FieldInit> {
     fn display(&self, layer: usize) {
-        branch("Fields", layer);
-        for field in self {
-            field.display(layer + 1);
+        if !self.is_empty() {
+            branch("Fields", layer);
+            for field in self {
+                field.display(layer + 1);
+            }
         }
     }
 }

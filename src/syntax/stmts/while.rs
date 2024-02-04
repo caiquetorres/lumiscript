@@ -17,7 +17,7 @@ impl Parse for StmtWhile {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtWhile {
             _while: input.parse()?,
-            cond: input.parse()?,
+            cond: Expr::parse_without_eager_brace(input)?,
             stmt: input.parse()?,
         })
     }

@@ -6,6 +6,7 @@ use crate::syntax::span::Span;
 
 use super::expr::Expr;
 
+#[derive(Debug)]
 pub struct BinOp {
     span: Span,
 }
