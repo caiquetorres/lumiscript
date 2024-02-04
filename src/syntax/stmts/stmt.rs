@@ -7,7 +7,6 @@ use crate::token;
 use super::block::StmtBlock;
 use super::class::StmtClass;
 use super::expr::StmtExpr;
-use super::fun::StmtExternFun;
 use super::fun::StmtFun;
 use super::print::StmtPrint;
 use super::r#break::StmtBreak;
@@ -26,7 +25,6 @@ pub enum Stmt {
     Print(StmtPrint),
     Block(StmtBlock),
     Fun(StmtFun),
-    ExternFun(StmtExternFun),
     Expr(StmtExpr),
     Impl(StmtImpl),
     Trait(StmtTrait),
@@ -100,7 +98,6 @@ impl DisplayTree for Stmt {
             Self::Block(block) => block.display(layer),
             Self::Expr(expr) => expr.display(layer),
             Self::Fun(fun) => fun.display(layer),
-            Self::ExternFun(fun) => fun.display(layer),
             Self::Impl(r#impl) => r#impl.display(layer),
             Self::Trait(tr) => tr.display(layer),
             Self::Class(class) => class.display(layer),
@@ -120,7 +117,7 @@ fn ambiguous_stmt(input: &mut ParseStream) -> Result<Stmt, String> {
         token!('{') => Ok(Stmt::Block(input.parse()?)),
         token!(let) => Ok(Stmt::Let(input.parse()?)),
         token!(println) => Ok(Stmt::Print(input.parse()?)),
-        token!(fun) => Ok(Stmt::Fun(input.parse()?)),
+        token!(static) | token!(extern) | token!(fun) => Ok(Stmt::Fun(input.parse()?)),
         token!(impl) => Ok(Stmt::Impl(input.parse()?)),
         token!(trait) => Ok(Stmt::Trait(input.parse()?)),
         token!(class) => Ok(Stmt::Class(input.parse()?)),
@@ -131,7 +128,6 @@ fn ambiguous_stmt(input: &mut ParseStream) -> Result<Stmt, String> {
         token!(break) => Ok(Stmt::Break(input.parse()?)),
         token!(continue) => Ok(Stmt::Continue(input.parse()?)),
         token!(const) => Ok(Stmt::Const(input.parse()?)),
-        token!(extern) => Ok(Stmt::ExternFun(input.parse()?)),
         _ => Ok(Stmt::Expr(input.parse()?)),
     }
 }

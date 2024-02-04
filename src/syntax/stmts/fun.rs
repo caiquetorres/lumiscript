@@ -10,6 +10,7 @@ use crate::syntax::symbols::ident::Ident;
 use crate::syntax::symbols::paren::LeftParen;
 use crate::syntax::symbols::paren::RightParen;
 use crate::syntax::symbols::r#extern::Extern;
+use crate::syntax::symbols::r#static::Static;
 use crate::syntax::symbols::semicolon::Semicolon;
 use crate::token;
 
@@ -113,46 +114,9 @@ impl DisplayTree for ReturnType {
     }
 }
 
-pub struct StmtExternFun {
-    _extern: Extern,
-    _fun: Fun,
-    ident: Ident,
-    _left_paren: LeftParen,
-    params: Vec<Param>,
-    _right_paren: RightParen,
-    return_ty: Option<ReturnType>,
-    _semicolon: Semicolon,
-}
-
-impl Parse for StmtExternFun {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        Ok(Self {
-            _extern: input.parse()?,
-            _fun: input.parse()?,
-            ident: input.parse()?,
-            _left_paren: input.parse()?,
-            params: input.parse()?,
-            _right_paren: input.parse()?,
-            return_ty: input.parse()?,
-            _semicolon: input.parse()?,
-        })
-    }
-}
-
-impl DisplayTree for StmtExternFun {
-    fn display(&self, layer: usize) {
-        branch("ExternFunStmt", layer);
-        self.ident.display(layer + 1);
-        self.params.display(layer + 1);
-
-        if let Some(return_ty) = &self.return_ty {
-            return_ty.display(layer + 1);
-        }
-    }
-}
-
-pub enum StmtFun2 {
+pub enum StmtFun {
     Default {
+        r#static: Option<Static>,
         _fun: Fun,
         ident: Ident,
         _left_paren: LeftParen,
@@ -162,6 +126,8 @@ pub enum StmtFun2 {
         block: StmtBlock,
     },
     Proto {
+        _extern: Option<Extern>,
+        r#static: Option<Static>,
         _fun: Fun,
         ident: Ident,
         _left_paren: LeftParen,
@@ -170,39 +136,57 @@ pub enum StmtFun2 {
         return_ty: Option<ReturnType>,
         _semicolon: Semicolon,
     },
-    Extern {
-        _extern: Extern,
-        _fun: Fun,
-        ident: Ident,
-        _left_paren: LeftParen,
-        params: Vec<Param>,
-        _right_paren: RightParen,
-        return_ty: Option<ReturnType>,
-        _semicolon: Semicolon,
-    },
-}
-
-pub struct StmtFun {
-    _fun: Fun,
-    ident: Ident,
-    _left_paren: LeftParen,
-    params: Vec<Param>,
-    _right_paren: RightParen,
-    return_ty: Option<ReturnType>,
-    block: StmtBlock,
 }
 
 impl Parse for StmtFun {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        Ok(StmtFun {
-            _fun: input.parse()?,
-            ident: input.parse()?,
-            _left_paren: input.parse()?,
-            params: input.parse()?,
-            _right_paren: input.parse()?,
-            return_ty: input.parse()?,
-            block: input.parse()?,
-        })
+        let _extern: Option<Extern> = input.parse()?;
+        let r#static = input.parse()?;
+        let _fun = input.parse()?;
+        let ident = input.parse()?;
+        let _left_paren = input.parse()?;
+        let params = input.parse()?;
+        let _right_paren = input.parse()?;
+        let return_ty = input.parse()?;
+
+        if _extern.is_some() {
+            Ok(StmtFun::Proto {
+                _extern,
+                r#static,
+                _fun,
+                ident,
+                _left_paren,
+                params,
+                _right_paren,
+                return_ty,
+                _semicolon: input.parse()?,
+            })
+        } else {
+            if input.peek() == token!(;) {
+                Ok(StmtFun::Proto {
+                    _extern,
+                    r#static,
+                    _fun,
+                    ident,
+                    _left_paren,
+                    params,
+                    _right_paren,
+                    return_ty,
+                    _semicolon: input.parse()?,
+                })
+            } else {
+                Ok(StmtFun::Default {
+                    r#static,
+                    _fun,
+                    ident,
+                    _left_paren,
+                    params,
+                    _right_paren,
+                    return_ty,
+                    block: input.parse()?,
+                })
+            }
+        }
     }
 }
 
@@ -220,75 +204,68 @@ impl Parse for Vec<StmtFun> {
 
 impl DisplayTree for StmtFun {
     fn display(&self, layer: usize) {
-        branch("FunStmt", layer);
-        self.ident.display(layer + 1);
-        self.params.display(layer + 1);
-
-        if let Some(return_ty) = &self.return_ty {
-            return_ty.display(layer + 1);
+        match self {
+            Self::Default { r#static, .. } => {
+                if let Some(_) = r#static {
+                    branch("StaticFunStmt", layer);
+                } else {
+                    branch("FunStmt", layer);
+                }
+            }
+            Self::Proto {
+                _extern, r#static, ..
+            } => {
+                if let Some(_) = r#static {
+                    if let Some(_) = _extern {
+                        branch("ExternStaticProtoFunStmt", layer);
+                    } else {
+                        branch("StaticProtoFunStmt", layer);
+                    }
+                } else {
+                    if let Some(_) = _extern {
+                        branch("ExternProtoFunStmt", layer);
+                    } else {
+                        branch("ProtoFunStmt", layer);
+                    }
+                }
+            }
         }
 
-        self.block.display(layer + 1);
+        match self {
+            Self::Default {
+                ident,
+                params,
+                return_ty,
+                block,
+                ..
+            } => {
+                ident.display(layer + 1);
+                params.display(layer + 1);
+
+                if let Some(return_ty) = &return_ty {
+                    return_ty.display(layer + 1);
+                }
+
+                block.display(layer + 1);
+            }
+            Self::Proto {
+                ident,
+                params,
+                return_ty,
+                ..
+            } => {
+                ident.display(layer + 1);
+                params.display(layer + 1);
+
+                if let Some(return_ty) = &return_ty {
+                    return_ty.display(layer + 1);
+                }
+            }
+        }
     }
 }
 
 impl DisplayTree for Vec<StmtFun> {
-    fn display(&self, layer: usize) {
-        for fun in self {
-            fun.display(layer);
-        }
-    }
-}
-
-pub struct StmtMethodProto {
-    _fun: Fun,
-    ident: Ident,
-    _left_paren: LeftParen,
-    params: Vec<Param>,
-    _right_paren: RightParen,
-    return_ty: Option<ReturnType>,
-    _semicolon: Semicolon,
-}
-
-impl Parse for StmtMethodProto {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        Ok(StmtMethodProto {
-            _fun: input.parse()?,
-            ident: input.parse()?,
-            _left_paren: input.parse()?,
-            params: input.parse()?,
-            _right_paren: input.parse()?,
-            return_ty: input.parse()?,
-            _semicolon: input.parse()?,
-        })
-    }
-}
-
-impl Parse for Vec<StmtMethodProto> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        let mut functions = vec![];
-
-        while input.peek() != token!('}') {
-            functions.push(input.parse()?)
-        }
-
-        Ok(functions)
-    }
-}
-
-impl DisplayTree for StmtMethodProto {
-    fn display(&self, layer: usize) {
-        branch("FunStmt", layer);
-        self.ident.display(layer + 1);
-        self.params.display(layer + 1);
-
-        if let Some(return_ty) = &self.return_ty {
-            return_ty.display(layer + 1);
-        }
-    }
-}
-
-impl DisplayTree for Vec<StmtMethodProto> {
     fn display(&self, layer: usize) {
         for fun in self {
             fun.display(layer);

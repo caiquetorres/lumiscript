@@ -19,5 +19,6 @@ pub mod paren;
 pub mod print;
 pub mod r#return;
 pub mod semicolon;
+pub mod r#static;
 pub mod r#trait;
 pub mod r#while;

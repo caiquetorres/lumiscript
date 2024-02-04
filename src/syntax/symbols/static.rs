@@ -4,27 +4,27 @@ use crate::syntax::parse::ParseStream;
 use crate::syntax::span::Span;
 use crate::token;
 
-pub struct Extern {
+pub struct Static {
     span: Span,
 }
 
-impl Extern {
+impl Static {
     pub fn name(&self) -> String {
         self.span.source_text.clone()
     }
 }
 
-impl Parse for Extern {
+impl Parse for Static {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        Ok(Extern {
-            span: Span::from_token(input.expect(token!(extern))?),
+        Ok(Static {
+            span: Span::from_token(input.expect(token!(static))?),
         })
     }
 }
 
-impl Parse for Option<Extern> {
+impl Parse for Option<Static> {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        if input.peek() == token!(extern) {
+        if input.peek() == token!(static) {
             Ok(Some(input.parse()?))
         } else {
             Ok(None)
