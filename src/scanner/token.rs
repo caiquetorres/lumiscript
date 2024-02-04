@@ -54,6 +54,7 @@ pub enum TokenKind {
     Trait,
     Impl,
     Interrogation,
+    Static,
 }
 
 /// Represents a span or range in the source code, identified by start and
@@ -200,6 +201,9 @@ macro_rules! token {
     };
     (extern) => {
         TokenKind::Extern
+    };
+    (static) => {
+        TokenKind::Static
     };
     (let) => {
         TokenKind::Let
