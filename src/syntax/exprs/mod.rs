@@ -8,3 +8,4 @@ pub mod class_init;
 pub mod get;
 pub mod call;
 pub mod assign;
+pub mod class;

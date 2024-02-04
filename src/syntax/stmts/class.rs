@@ -34,12 +34,19 @@ impl DisplayTree for Field {
 
 impl Parse for Vec<Field> {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        let mut fields = vec![];
-        while input.peek() != token!('}') {
+        if input.peek() == token!('}') {
+            Ok(vec![])
+        } else {
+            let mut fields = vec![];
             fields.push(input.parse()?);
-            input.next(); // ,
+
+            while input.peek() != token!('}') {
+                input.expect(token!(,))?;
+                fields.push(input.parse()?);
+            }
+
+            Ok(fields)
         }
-        Ok(fields)
     }
 }
 
@@ -74,7 +81,7 @@ impl Parse for StmtClass {
 
 impl DisplayTree for StmtClass {
     fn display(&self, layer: usize) {
-        branch("Class", layer);
+        branch("ClassStmt", layer);
         self.ident.display(layer + 1);
         self.fields.display(layer + 1);
     }

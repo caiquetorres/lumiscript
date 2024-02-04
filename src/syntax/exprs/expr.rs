@@ -10,6 +10,7 @@ use crate::syntax::parse::ParseStream;
 use super::assign::ExprAssign;
 use super::binary::ExprBinary;
 use super::call::ExprCall;
+use super::class::ExprClass;
 use super::get::ExprGet;
 use super::ident::ExprIdent;
 use super::lit::ExprLit;
@@ -25,6 +26,7 @@ pub enum Expr {
     Get(ExprGet),
     Call(ExprCall),
     Assign(ExprAssign),
+    Class(ExprClass),
 }
 
 impl Parse for Expr {
@@ -69,6 +71,7 @@ impl DisplayTree for Expr {
             Self::Get(get) => get.display(layer),
             Self::Call(call) => call.display(layer),
             Self::Assign(assign) => assign.display(layer),
+            Self::Class(class) => class.display(layer),
         }
     }
 }
@@ -205,24 +208,33 @@ fn unary(input: &mut ParseStream) -> Result<Expr, String> {
 fn call(input: &mut ParseStream) -> Result<Expr, String> {
     let mut expr = primary(input)?;
 
-    while input.peek() == token!(.) || input.peek() == token!('(') {
-        expr = match input.peek() {
-            token!('(') => Expr::Call(ExprCall {
-                callee: Box::new(expr),
-                left_paren: input.parse()?,
-                args: input.parse()?,
-                right_paren: input.parse()?,
-            }),
-            token!(.) => Expr::Get(ExprGet {
-                expr: Box::new(expr),
-                dot: input.parse()?,
-                ident: input.parse()?,
-            }),
-            _ => unreachable!(),
+    if input.peek() == token!('{') {
+        Ok(Expr::Class(ExprClass {
+            class: Box::new(expr),
+            left_brace: input.parse()?,
+            field_inits: input.parse()?,
+            right_brace: input.parse()?,
+        }))
+    } else {
+        while input.peek() == token!(.) || input.peek() == token!('(') {
+            expr = match input.peek() {
+                token!('(') => Expr::Call(ExprCall {
+                    callee: Box::new(expr),
+                    left_paren: input.parse()?,
+                    args: input.parse()?,
+                    right_paren: input.parse()?,
+                }),
+                token!(.) => Expr::Get(ExprGet {
+                    expr: Box::new(expr),
+                    dot: input.parse()?,
+                    ident: input.parse()?,
+                }),
+                _ => unreachable!(),
+            }
         }
-    }
 
-    Ok(expr)
+        Ok(expr)
+    }
 }
 
 fn primary(input: &mut ParseStream) -> Result<Expr, String> {
