@@ -27,7 +27,7 @@ impl Parse for BinOp {
 
 impl DisplayTree for BinOp {
     fn display(&self, layer: usize) {
-        branch(&format!("UnaryOp: {}", self.name()), layer)
+        branch(&format!("BinOp: {}", self.name()), layer)
     }
 }
 

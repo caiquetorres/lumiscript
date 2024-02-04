@@ -8,11 +8,10 @@ use std::env;
 use std::fs;
 
 use scanner::lexer::Lexer;
-use scanner::token::TokenKind;
 use source_code::SourceCode;
+use syntax::ast::Ast;
 use syntax::display_tree::DisplayTree;
 use syntax::parse::ParseStream;
-use syntax::stmts::stmt::Stmt;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -29,28 +28,15 @@ fn compile(source_code: &str) {
     let mut lexer = Lexer::new(source_code.clone());
     let tokens = lexer.lex();
 
-    // for token in &tokens {
-    //     println!("{:?}", token);
-    // }
-
     if lexer.error_reporter().has_errors() {
         lexer.error_reporter().show();
     } else {
         let mut parser = ParseStream::new(tokens, source_code.clone());
-        let mut stmts = vec![];
 
-        while parser.peek() != token!(eof) {
-            if let Ok(stmt) = parser.parse::<Stmt>() {
-                stmts.push(stmt);
-            } else {
-                break;
-            }
-        }
-
-        if parser.error_reporter().has_errors() {
-            parser.error_reporter().show();
+        if let Ok(ast) = parser.parse::<Ast>() {
+            ast.display(0);
         } else {
-            stmts.display(0);
+            parser.error_reporter().show();
         }
     }
 }
