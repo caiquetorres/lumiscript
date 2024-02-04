@@ -27,11 +27,3 @@ impl Add for Num {
 impl Sub for Num {
     extern fun sub(other: Num) -> Num;
 }
-
-fun main() {
-    let a = 1 + 2;
-
-    if a {
-        let b = a - 1;
-    }
-}

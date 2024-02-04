@@ -1,3 +1,1 @@
-fun helloWorld() {
-    println "Hello World!";
-}
+extern fun clock() -> Num;
