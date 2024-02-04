@@ -132,6 +132,12 @@ impl Lexer {
         self.consume(); // *
 
         while !self.at_end() && (self.peek() != '*' || self.peek2() != '/') {
+            if self.peek() == '\n' {
+                self.line_column.next_line();
+            } else {
+                self.line_column.next_column();
+            }
+
             self.consume();
         }
 
@@ -328,6 +334,12 @@ impl Iterator for Lexer {
                             "extern" => Some(Token::new(
                                 token!(extern),
                                 Some("extern"),
+                                start,
+                                self.line_column,
+                            )),
+                            "static" => Some(Token::new(
+                                token!(static),
+                                Some("static"),
                                 start,
                                 self.line_column,
                             )),
