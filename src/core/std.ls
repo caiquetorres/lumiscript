@@ -1,1 +1,0 @@
-extern fun clock() -> Num;

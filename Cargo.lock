@@ -3,5 +3,22 @@
 version = 3
 
 [[package]]
-name = "interpreter"
+name = "cli"
+version = "0.1.0"
+dependencies = [
+ "compiler",
+ "type_checker",
+ "virtual_machine",
+]
+
+[[package]]
+name = "compiler"
+version = "0.1.0"
+
+[[package]]
+name = "type_checker"
+version = "0.1.0"
+
+[[package]]
+name = "virtual_machine"
 version = "0.1.0"

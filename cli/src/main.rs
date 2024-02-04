@@ -1,17 +1,14 @@
-pub mod error_reporter;
-pub mod line_column;
-pub mod scanner;
-pub mod source_code;
-pub mod syntax;
-
 use std::env;
 use std::fs;
 
-use scanner::lexer::Lexer;
-use source_code::SourceCode;
-use syntax::ast::Ast;
-use syntax::display_tree::DisplayTree;
-use syntax::parse::ParseStream;
+use compiler::generator::Chunk;
+use compiler::generator::Constant;
+use compiler::generator::OpCode;
+use compiler::scanner::lexer::Lexer;
+use compiler::source_code::SourceCode;
+use compiler::syntax::ast::Ast;
+use compiler::syntax::display_tree::DisplayTree;
+use compiler::syntax::parse::ParseStream;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -39,4 +36,15 @@ fn compile(source_code: &str) {
             parser.error_reporter().show();
         }
     }
+
+    let mut chunk = Chunk::new();
+
+    let c = chunk.add_constant(Constant::Value(1.2));
+
+    chunk.write_op(OpCode::Constant);
+    chunk.write_op_as_byte(c);
+    chunk.write_op(OpCode::Return);
+
+    println!("{:#?}", chunk);
+    println!("{:#?}", chunk.disassemble());
 }
