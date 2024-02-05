@@ -1,5 +1,3 @@
-use crate::line_column::LineColumn;
-
 /// `TokenKind` is an enumeration of different token types that can be
 /// produced during lexical analysis. Each variant corresponds to a
 /// specific keyword, punctuation, or identifier type in the source code.
@@ -264,4 +262,5 @@ macro_rules! token {
     };
 }
 
+use lumi_core::line_column::LineColumn;
 pub(crate) use token;

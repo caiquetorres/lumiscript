@@ -1,14 +1,7 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+use compiler::generator::chunk::Chunk;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub struct VirtualMachine;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+impl VirtualMachine {
+    pub fn run(_chunk: Chunk) {}
 }

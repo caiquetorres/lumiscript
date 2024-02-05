@@ -1,4 +1,6 @@
-use crate::{line_column::LineColumn, scanner::token::Token};
+use lumi_core::line_column::LineColumn;
+
+use crate::scanner::token::Token;
 
 #[derive(Debug)]
 pub struct Span {

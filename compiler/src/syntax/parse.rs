@@ -1,7 +1,8 @@
-use crate::error_reporter::ErrorReporter;
+use lumi_core::error_reporter::ErrorReporter;
+use lumi_core::source_code::SourceCode;
+
 use crate::scanner::token::Token;
 use crate::scanner::token::TokenKind;
-use crate::source_code::SourceCode;
 
 pub trait Parse: Sized {
     fn parse(input: &mut ParseStream) -> Result<Self, String>;

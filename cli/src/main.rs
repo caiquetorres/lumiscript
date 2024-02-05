@@ -1,25 +1,37 @@
-use std::env;
 use std::fs;
 
-use compiler::generator::Chunk;
-use compiler::generator::Constant;
-use compiler::generator::OpCode;
+use clap::Parser;
+use compiler::generator::generator::Generator;
 use compiler::scanner::lexer::Lexer;
-use compiler::source_code::SourceCode;
 use compiler::syntax::ast::Ast;
 use compiler::syntax::display_tree::DisplayTree;
 use compiler::syntax::parse::ParseStream;
+use lumi_core::source_code::SourceCode;
+use type_checker::TypeChecker;
+use virtual_machine::VirtualMachine;
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
+#[derive(Parser, Debug)]
+#[command()]
+struct Args {
+    #[arg(short, long)]
+    file: String,
 
-    let file_path = args[1].clone();
-    let content = fs::read_to_string(file_path).unwrap();
-
-    compile(&content);
+    #[arg(short, long, default_value_t = true)]
+    type_check: bool,
 }
 
-fn compile(source_code: &str) {
+fn main() -> Result<(), String> {
+    let args = Args::parse();
+
+    if let Ok(content) = fs::read_to_string(&args.file) {
+        run(&content, args.type_check);
+        Ok(())
+    } else {
+        Err("File not found".to_owned())
+    }
+}
+
+fn run(source_code: &str, should_type_check: bool) {
     let source_code = SourceCode::new(source_code);
 
     let mut lexer = Lexer::new(source_code.clone());
@@ -27,24 +39,24 @@ fn compile(source_code: &str) {
 
     if lexer.error_reporter().has_errors() {
         lexer.error_reporter().show();
-    } else {
-        let mut parser = ParseStream::new(tokens, source_code.clone());
-
-        if let Ok(ast) = parser.parse::<Ast>() {
-            ast.display(0);
-        } else {
-            parser.error_reporter().show();
-        }
+        return;
     }
 
-    let mut chunk = Chunk::new();
+    let mut parser = ParseStream::new(tokens, source_code.clone());
+    let ast: Result<Ast, String> = parser.parse();
 
-    let c = chunk.add_constant(Constant::Value(1.2));
+    if parser.error_reporter().has_errors() {
+        parser.error_reporter().show();
+        return;
+    }
 
-    chunk.write_op(OpCode::Constant);
-    chunk.write_op_as_byte(c);
-    chunk.write_op(OpCode::Return);
+    let ast = ast.unwrap();
+    ast.display(0);
 
-    println!("{:#?}", chunk);
-    println!("{:#?}", chunk.disassemble());
+    if should_type_check {
+        TypeChecker::check(&ast);
+    }
+
+    let chunk = Generator::generate(&ast);
+    VirtualMachine::run(chunk);
 }

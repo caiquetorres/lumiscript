@@ -25,6 +25,13 @@ impl ErrorReporter {
         self.errors.len() > 0
     }
 
+    pub fn report(&mut self, message: &str, line_column: LineColumn) {
+        self.errors.push(ErrorHandler {
+            message: message.to_owned(),
+            line_column,
+        });
+    }
+
     pub fn show(&self) {
         for error in self.errors.iter() {
             let line = error.line_column.line;
@@ -40,12 +47,5 @@ impl ErrorReporter {
 
             eprintln!("{}\n", output);
         }
-    }
-
-    pub fn report(&mut self, message: &str, line_column: LineColumn) {
-        self.errors.push(ErrorHandler {
-            message: message.to_owned(),
-            line_column,
-        });
     }
 }
