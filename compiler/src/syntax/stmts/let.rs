@@ -18,6 +18,16 @@ pub struct StmtLet {
     _semicolon: Semicolon,
 }
 
+impl StmtLet {
+    pub fn ident(&self) -> &Ident {
+        &self.ident
+    }
+
+    pub fn expr(&self) -> &Expr {
+        &self.expr
+    }
+}
+
 impl Parse for StmtLet {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtLet {

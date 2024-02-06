@@ -18,6 +18,16 @@ pub struct StmtConst {
     _semicolon: Semicolon,
 }
 
+impl StmtConst {
+    pub fn ident(&self) -> &Ident {
+        &self.ident
+    }
+
+    pub fn expr(&self) -> &Expr {
+        &self.expr
+    }
+}
+
 impl Parse for StmtConst {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtConst {

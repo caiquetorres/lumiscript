@@ -22,6 +22,7 @@ use super::r#while::StmtWhile;
 
 pub enum Stmt {
     Let(StmtLet),
+    Const(StmtConst),
     Print(StmtPrint),
     Block(StmtBlock),
     Fun(StmtFun),
@@ -35,7 +36,6 @@ pub enum Stmt {
     For(StmtFor),
     Break(StmtBreak),
     Continue(StmtContinue),
-    Const(StmtConst),
 }
 
 impl Parse for Stmt {

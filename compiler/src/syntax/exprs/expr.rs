@@ -6,6 +6,7 @@ use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
+use crate::syntax::span::Span;
 
 use super::assign::ExprAssign;
 use super::binary::ExprBinary;
@@ -204,7 +205,7 @@ fn unary(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
     if input.peek() == token!(+) || input.peek() == token!(-) || input.peek() == token!(!) {
         Ok(Expr::Unary(ExprUnary {
             operator: input.parse()?,
-            expr: Box::new(primary(input)?),
+            expr: Box::new(unary(input, allow_struct)?),
         }))
     } else {
         call(input, allow_struct)
@@ -246,7 +247,15 @@ fn call(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
 fn primary(input: &mut ParseStream) -> Result<Expr, String> {
     match input.peek() {
         ident!() => Ok(Expr::Ident(input.parse()?)),
-        token!(false) | token!(true) | token!(nil) | number!() => Ok(Expr::Lit(input.parse()?)),
+        token!(nil) => Ok(Expr::Lit(ExprLit::Nil {
+            span: Span::from_token(input.next()),
+        })),
+        number!() => Ok(Expr::Lit(ExprLit::Num {
+            span: Span::from_token(input.next()),
+        })),
+        token!(false) | token!(true) => Ok(Expr::Lit(ExprLit::Bool {
+            span: Span::from_token(input.next()),
+        })),
         token!('(') => Ok(Expr::Paren(ExprParen {
             left_paren: input.parse()?,
             expr: input.parse()?,

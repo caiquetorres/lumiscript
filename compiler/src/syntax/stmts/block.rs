@@ -13,6 +13,12 @@ pub struct StmtBlock {
     _right_brace: RightBrace,
 }
 
+impl StmtBlock {
+    pub fn stmts(&self) -> &Vec<Box<Stmt>> {
+        &self.stmts
+    }
+}
+
 impl Parse for StmtBlock {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtBlock {

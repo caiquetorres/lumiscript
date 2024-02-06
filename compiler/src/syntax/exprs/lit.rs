@@ -1,24 +1,20 @@
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
-use crate::syntax::parse::Parse;
-use crate::syntax::parse::ParseStream;
 use crate::syntax::span::Span;
 
-pub struct ExprLit {
-    span: Span,
+pub enum ExprLit {
+    Num { span: Span },
+    Bool { span: Span },
+    Nil { span: Span },
 }
 
 impl ExprLit {
     pub fn name(&self) -> String {
-        self.span.source_text.clone()
-    }
-}
-
-impl Parse for ExprLit {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        Ok(ExprLit {
-            span: Span::from_token(input.next()),
-        })
+        match self {
+            Self::Num { span } => span.source_text.clone(),
+            Self::Bool { span } => span.source_text.clone(),
+            Self::Nil { span } => span.source_text.clone(),
+        }
     }
 }
 

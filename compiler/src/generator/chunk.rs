@@ -1,32 +1,44 @@
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Copy)]
 #[repr(u8)]
-pub enum OpCode {
+#[derive(Debug, Clone, Copy)]
+pub enum Bytecode {
+    BeginScope,
+    EndScope,
+    LoadConstant(usize), // Not the best solution
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Negate,
+    Not,
+    Equal,
+    Greater,
+    Less,
+    Pop,
+    SetVar,
+    GetVar,
+    SetConst,
+    GetConst,
     Return,
-    Constant,
 }
 
-impl From<u8> for OpCode {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => OpCode::Return,
-            1 => OpCode::Constant,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl Display for OpCode {
+impl Display for Bytecode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Constant {
-    Value(f64),
+    Nil,
+    Bool(bool),
+    Float(f64),
+    Str(String),
+    Obj(*mut Object),
 }
+
+pub enum Object {}
 
 impl Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -34,61 +46,34 @@ impl Display for Constant {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Chunk {
-    data: Vec<u8>,
+    buffer: Vec<Bytecode>,
     constants: Vec<Constant>,
 }
 
 impl Chunk {
     pub fn new() -> Self {
         Self {
+            buffer: vec![],
             constants: vec![],
-            data: vec![],
         }
     }
 
-    pub fn add_constant(&mut self, constant: Constant) -> u8 {
+    pub fn buffer(&self) -> &Vec<Bytecode> {
+        &self.buffer
+    }
+
+    pub fn write_op(&mut self, op_code: Bytecode) {
+        self.buffer.push(op_code);
+    }
+
+    pub fn add_constant(&mut self, constant: Constant) -> usize {
         self.constants.push(constant);
-        (self.constants.len() - 1) as u8
+        self.constants.len() - 1
     }
 
-    pub fn write_op_as_byte(&mut self, op_code: u8) {
-        self.data.push(op_code);
-    }
-
-    pub fn write_op(&mut self, op_code: OpCode) {
-        self.data.push(op_code as u8);
-    }
-
-    pub fn disassemble(&self) -> Vec<String> {
-        let mut i = 0;
-        let mut instructions = vec![];
-
-        while i < self.data.len() {
-            let (str_rep, j) = self.disassemble_instruction(i);
-            instructions.push(str_rep);
-            i += j;
-        }
-
-        instructions
-    }
-
-    fn disassemble_instruction(&self, offset: usize) -> (String, usize) {
-        match OpCode::from(self.data[offset]) {
-            OpCode::Constant => {
-                let pos = self.data[offset + 1];
-                (
-                    format!(
-                        "{} {} {}",
-                        OpCode::Constant,
-                        pos,
-                        self.constants[pos as usize]
-                    ),
-                    offset + 2,
-                )
-            }
-            op => (format!("{}", op), offset + 1),
-        }
+    pub fn get_constant(&self, i: usize) -> Constant {
+        self.constants[i].clone()
     }
 }
