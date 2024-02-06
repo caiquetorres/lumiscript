@@ -39,6 +39,11 @@ impl Generate for Stmt {
                 expr.expr().generate(chunk);
                 chunk.write_op(Bytecode::Pop);
             }
+            Stmt::Class(class) => {
+                let i = chunk.add_constant(Constant::Str(class.name()));
+                chunk.write_op(Bytecode::LoadConstant(i));
+                chunk.write_op(Bytecode::DeclareClass);
+            }
             _ => {}
         }
     }
@@ -100,6 +105,13 @@ impl Generate for Expr {
                         chunk.write_op(Bytecode::Not);
                     }
                     _ => {}
+                }
+            }
+            Expr::Class(class) => {
+                if let Expr::Ident(ident) = class.class.as_ref() {
+                    let i = chunk.add_constant(Constant::Str(ident.ident.name()));
+                    chunk.write_op(Bytecode::LoadConstant(i));
+                    chunk.write_op(Bytecode::InstantiateClass);
                 }
             }
             _ => {}

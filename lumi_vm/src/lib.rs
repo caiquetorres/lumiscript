@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use compiler::generator::chunk::Bytecode;
 use compiler::generator::chunk::Chunk;
 use compiler::generator::chunk::Constant;
+use compiler::generator::chunk::ObjectClass;
+use compiler::generator::chunk::ObjectInstance;
 
 pub struct VirtualMachine;
 
@@ -71,6 +73,30 @@ impl VirtualMachine {
                     let var = stack.pop().unwrap();
                     if let Constant::Str(ident) = var {
                         current_scope.insert(&ident, stack.pop().unwrap());
+                    }
+                }
+                Bytecode::DeclareClass => {
+                    let constant = stack.pop().unwrap();
+                    if let Constant::Str(name) = constant {
+                        let mut ptr = Box::new(ObjectClass { name: name.clone() });
+                        let class = Constant::Class(ptr.as_mut() as *mut ObjectClass);
+
+                        current_scope.insert(&name, class);
+                        std::mem::forget(ptr); // avoid dropping the value when going out of scope.
+                    }
+                }
+                Bytecode::InstantiateClass => {
+                    let constant = stack.pop().unwrap();
+                    if let Constant::Str(name) = constant {
+                        let c = current_scope.get(&name).unwrap();
+                        if let Constant::Class(class) = c {
+                            let mut ptr = Box::new(ObjectInstance { class });
+                            let instance = Constant::Instance(ptr.as_mut() as *mut ObjectInstance);
+
+                            stack.push(instance);
+
+                            std::mem::forget(ptr); // avoid dropping the value when going out of scope.
+                        }
                     }
                 }
                 Bytecode::GetConst => {
@@ -170,15 +196,17 @@ impl VirtualMachine {
                         stack.push(Constant::Bool(result));
                     }
                 }
-                Bytecode::Return | Bytecode::Pop => {
+                Bytecode::Return => {}
+                Bytecode::Pop => {
                     if let Some(result) = stack.pop() {
                         println!("{:?}", result);
                     }
                 }
+                _ => {}
             }
         }
 
         // println!("{:?}", stack);
-        // println!("{:?}", global_scope);
+        // println!("{:?}", current_scope);
     }
 }

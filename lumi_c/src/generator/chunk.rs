@@ -20,6 +20,8 @@ pub enum Bytecode {
     GetVar,
     SetConst,
     GetConst,
+    DeclareClass,
+    InstantiateClass,
     Return,
 }
 
@@ -35,10 +37,19 @@ pub enum Constant {
     Bool(bool),
     Float(f64),
     Str(String),
-    Obj(*mut Object),
+    Instance(*mut ObjectInstance),
+    Class(*mut ObjectClass),
 }
 
-pub enum Object {}
+#[derive(Debug)]
+pub struct ObjectInstance {
+    pub class: *mut ObjectClass,
+}
+
+#[derive(Debug)]
+pub struct ObjectClass {
+    pub name: String,
+}
 
 impl Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -67,6 +67,12 @@ pub struct StmtClass {
     _right_brace: RightBrace,
 }
 
+impl StmtClass {
+    pub fn name(&self) -> String {
+        self.ident.name()
+    }
+}
+
 impl Parse for StmtClass {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtClass {
