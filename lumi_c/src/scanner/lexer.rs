@@ -72,6 +72,8 @@ impl Lexer {
             self.cur += 1;
         }
 
+        // REVIEW: We should improve this recursion. Maybe removing it.
+
         if self.peek() == '/' && self.peek2() == '/' {
             self.skip_one_line_comment();
         }

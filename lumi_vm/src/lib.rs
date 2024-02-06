@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
 use compiler::generator::chunk::Bytecode;
-use compiler::generator::chunk::Chunk;
+use compiler::generator::chunk::CallFrame;
+use compiler::generator::chunk::CallFrameStack;
 use compiler::generator::chunk::Constant;
 use compiler::generator::chunk::ObjectClass;
+use compiler::generator::chunk::ObjectFunction;
 use compiler::generator::chunk::ObjectInstance;
 
 pub struct VirtualMachine;
@@ -45,13 +47,25 @@ impl Scope {
 }
 
 impl VirtualMachine {
-    pub fn run(chunk: Chunk) {
+    pub fn run(root_fun: ObjectFunction) {
         let global_scope = Scope::global();
         let mut current_scope = global_scope;
 
-        let mut stack = Vec::new();
+        let mut frames = CallFrameStack::new();
+        let mut stack: Vec<Constant> = Vec::new();
 
-        for instruction in chunk.buffer().clone() {
+        let mut root_frame = Box::new(root_fun);
+
+        frames.add(CallFrame::new(
+            root_frame.as_mut() as *mut ObjectFunction,
+            vec![],
+        ));
+
+        std::mem::forget(root_frame);
+
+        let mut should_update_counter = true;
+
+        while let Some(instruction) = frames.get_instruction() {
             match instruction {
                 Bytecode::BeginScope => {
                     current_scope = Scope::new(Box::new(current_scope));
@@ -61,7 +75,25 @@ impl VirtualMachine {
                         current_scope = *parent;
                     }
                 }
-                Bytecode::LoadConstant(i) => stack.push(chunk.get_constant(i)),
+                Bytecode::DeclareFunc => {
+                    let func = stack.pop().unwrap();
+                    let func_name = stack.pop().unwrap();
+
+                    if let Constant::Str(ident) = func_name {
+                        current_scope.insert(&ident, func);
+                    }
+                }
+                Bytecode::Call => {
+                    let func = stack.pop().unwrap();
+
+                    if let Constant::Func(func) = func {
+                        frames.add(CallFrame::new(func, vec![]));
+                        should_update_counter = false;
+                    }
+                }
+                Bytecode::LoadConstant(i) => {
+                    stack.push(frames.current().unwrap().function().chunk.get_constant(i))
+                }
                 Bytecode::GetVar => {
                     let var = stack.pop().unwrap();
                     if let Constant::Str(ident) = var {
@@ -196,17 +228,24 @@ impl VirtualMachine {
                         stack.push(Constant::Bool(result));
                     }
                 }
-                Bytecode::Return => {}
+                Bytecode::Return => {
+                    frames.pop();
+                }
                 Bytecode::Pop => {
                     if let Some(result) = stack.pop() {
                         println!("{:?}", result);
                     }
                 }
-                _ => {}
+            }
+
+            if should_update_counter {
+                frames.next_instruction();
+            } else {
+                should_update_counter = true;
             }
         }
 
-        // println!("{:?}", stack);
+        // println!("output: {:?}", stack);
         // println!("{:?}", current_scope);
     }
 }

@@ -3,9 +3,11 @@ use crate::generator::chunk::Constant;
 use crate::syntax::ast::Ast;
 use crate::syntax::exprs::expr::Expr;
 use crate::syntax::exprs::lit::ExprLit;
+use crate::syntax::stmts::fun::StmtFun;
 use crate::syntax::stmts::stmt::Stmt;
 
 use super::chunk::Chunk;
+use super::chunk::ObjectFunction;
 
 trait Generate {
     fn generate(&self, chunk: &mut Chunk);
@@ -22,6 +24,37 @@ impl Generate for Stmt {
                 }
 
                 chunk.write_op(Bytecode::EndScope);
+            }
+            Stmt::Fun(func) => {
+                match func {
+                    StmtFun::Default { ident, block, .. } => {
+                        let i = chunk.add_constant(Constant::Str(ident.name()));
+                        chunk.write_op(Bytecode::LoadConstant(i));
+
+                        let mut new_chunk = Chunk::new();
+
+                        for stmt in block.stmts() {
+                            stmt.generate(&mut new_chunk);
+                        }
+                        new_chunk.write_op(Bytecode::Return);
+
+                        let mut func = Box::new(ObjectFunction {
+                            arity: 0,
+                            name: ident.name().clone(),
+                            chunk: new_chunk,
+                        });
+
+                        let i = chunk
+                            .add_constant(Constant::Func(func.as_mut() as *mut ObjectFunction));
+                        chunk.write_op(Bytecode::LoadConstant(i));
+                        chunk.write_op(Bytecode::DeclareFunc);
+
+                        std::mem::forget(func); // avoid dropping the value when going out of scope.
+                    }
+                    StmtFun::Proto { .. } => {
+                        // ignore, prototypes are only used for trait declarations and in the semantic analysis step.
+                    }
+                }
             }
             Stmt::Let(stmt) => {
                 stmt.expr().generate(chunk);
@@ -78,6 +111,10 @@ impl Generate for Expr {
                     "!" => chunk.write_op(Bytecode::Not),
                     _ => unreachable!(),
                 }
+            }
+            Expr::Call(call) => {
+                call.callee.generate(chunk);
+                chunk.write_op(Bytecode::Call);
             }
             Expr::Paren(paren) => paren.expr.generate(chunk),
             Expr::Binary(bin) => {
