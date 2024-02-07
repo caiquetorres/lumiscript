@@ -2,6 +2,7 @@ pub mod call_frame;
 pub mod scope;
 
 use std::collections::HashMap;
+use std::time::Instant;
 
 use call_frame::CallFrame;
 use call_frame::CallFrameStack;
@@ -10,6 +11,7 @@ use compiler::generator::obj::Obj;
 use compiler::generator::obj::ObjCls;
 use compiler::generator::obj::ObjFunc;
 use compiler::generator::obj::ObjInst;
+use compiler::generator::obj::ObjNativeFunc;
 use scope::ScopeStack;
 
 pub struct VirtualMachine;
@@ -21,27 +23,114 @@ impl VirtualMachine {
         let mut stack: Vec<Obj> = Vec::new();
 
         let mut root_frame = Box::new(root_fun);
-        frames.push(CallFrame::new(root_frame.as_mut() as *mut ObjFunc, vec![]));
 
-        std::mem::forget(root_frame); // avoid dropping the value when going out of scope.
+        frames.push(CallFrame::new(
+            root_frame.as_mut() as *mut ObjFunc,
+            HashMap::new(),
+        ));
 
         let mut should_update_counter = true;
 
+        let start_time = Instant::now();
+
+        let mut clock_native_func = Box::new(ObjNativeFunc {
+            name: "clock".to_owned(),
+            func: Box::new(move |_, _| -> Obj {
+                let end_time = Instant::now();
+                let elapsed_time = end_time - start_time;
+                Obj::Float(elapsed_time.as_millis() as f64)
+            }),
+        });
+
+        scope_stack.insert(
+            &clock_native_func.name.clone(),
+            Obj::NativeFunc(clock_native_func.as_mut() as *mut ObjNativeFunc),
+        );
+
+        std::mem::forget(root_frame);
+
         while let Some(instruction) = frames.current().and_then(|frame| frame.peek()) {
             match instruction {
-                Bytecode::BeginScope => scope_stack.push(),
-                Bytecode::EndScope => scope_stack.pop(),
+                Bytecode::Println => {
+                    let obj = stack.pop().unwrap();
+                    match obj {
+                        Obj::Nil => println!("nil"),
+                        Obj::Float(value) => println!("{}", value),
+                        Obj::Bool(value) => println!("{}", value),
+                        Obj::Func(_) => println!("<func>"),
+                        Obj::Class(class) => unsafe {
+                            let class = &*class;
+                            println!("<class {}>", class.name);
+                        },
+                        Obj::Instance(inst) => unsafe {
+                            let inst = &*inst;
+                            let class = &*inst.class_ptr();
+                            println!("<instance {}>", class.name);
+                        },
+                        _ => {}
+                    }
+                }
+                Bytecode::BeginScope => {
+                    scope_stack.push();
+
+                    if let Some(current) = frames.current() {
+                        for (key, object) in current.slots() {
+                            scope_stack.insert(key, object.clone());
+                        }
+                    }
+                }
+                Bytecode::EndScope => {
+                    scope_stack.pop();
+                    frames.pop();
+                }
                 Bytecode::DeclareFunc => {
-                    let func = stack.pop().unwrap();
                     let func_name = stack.pop().unwrap().as_str();
+                    let func = stack.pop().unwrap();
                     scope_stack.insert(&func_name, func);
                 }
                 Bytecode::Call => {
-                    let func = stack.pop().map(|obj| obj.as_function());
+                    let func = stack.pop().unwrap();
 
-                    if let Some(func) = func {
-                        frames.push(CallFrame::new(func, vec![]));
+                    if let Obj::Func(func) = func {
+                        let arity = stack.pop().map(|obj| obj.as_float());
+
+                        let mut args = vec![];
+
+                        if let Some(arity) = arity {
+                            for _ in 0..arity as u8 {
+                                let arg = stack.pop().unwrap();
+                                args.push(arg);
+                            }
+                        }
+
+                        let mut slots = HashMap::new();
+
+                        unsafe {
+                            let func = &*func;
+                            for i in 0..func.params.len() {
+                                slots.insert(func.params[i].clone(), args[i].clone());
+                            }
+                        }
+
+                        frames.push(CallFrame::new(func, slots));
                         should_update_counter = false;
+                    } else if let Obj::NativeFunc(func) = func {
+                        let arity = stack.pop().map(|obj| obj.as_float());
+
+                        let mut args = vec![];
+
+                        if let Some(arity) = arity {
+                            for _ in 0..arity as u8 {
+                                let arg = stack.pop().unwrap();
+                                args.push(arg);
+                            }
+                        }
+
+                        unsafe {
+                            let func = &*func;
+                            let res = (func.func)(arity.unwrap() as usize, args);
+                            stack.push(res);
+                        }
                     }
                 }
                 Bytecode::LoadConstant(i) => {
@@ -208,19 +297,10 @@ impl VirtualMachine {
                         stack.push(Obj::Bool(result));
                     }
                 }
-                Bytecode::Return => {
-                    frames.pop();
-                }
                 Bytecode::Pop => {
-                    if let Some(result) = stack.pop() {
-                        println!("{:?}", result);
-                        // if let Object::Instance(inst) = result {
-                        //     unsafe {
-                        //         println!("{:?}", &*inst);
-                        //     }
-                        // }
-                    }
+                    stack.pop();
                 }
+                Bytecode::Return => {}
             }
 
             if should_update_counter {

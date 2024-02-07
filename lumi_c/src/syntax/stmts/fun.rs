@@ -49,6 +49,16 @@ pub struct Param {
     ty: ParamType,
 }
 
+impl Param {
+    pub fn ident(&self) -> &Ident {
+        &self.ident
+    }
+
+    pub fn ty(&self) -> &ParamType {
+        &self.ty
+    }
+}
+
 impl Parse for Param {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(Param {

@@ -14,6 +14,7 @@ pub enum Obj {
     Instance(*mut ObjInst),
     Class(*mut ObjCls),
     Func(*mut ObjFunc),
+    NativeFunc(*mut ObjNativeFunc),
 }
 
 impl Obj {
@@ -64,23 +65,36 @@ impl Obj {
             panic!();
         }
     }
+
+    pub fn as_native_function(&self) -> *mut ObjNativeFunc {
+        if let Obj::NativeFunc(value) = self {
+            *value
+        } else {
+            panic!();
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct ObjFunc {
     pub name: String,
-    pub arity: u8,
+    pub params: Vec<String>,
     pub chunk: Chunk,
 }
 
 impl ObjFunc {
     pub fn root(chunk: Chunk) -> Self {
         Self {
-            arity: 0,
-            name: String::new(),
             chunk,
+            name: String::new(),
+            params: Vec::new(),
         }
     }
+}
+
+pub struct ObjNativeFunc {
+    pub name: String,
+    pub func: Box<dyn Fn(usize, Vec<Obj>) -> Obj>,
 }
 
 #[derive(Debug)]

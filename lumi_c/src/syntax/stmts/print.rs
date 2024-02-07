@@ -11,6 +11,12 @@ pub struct StmtPrint {
     _semicolon: Semicolon,
 }
 
+impl StmtPrint {
+    pub fn expr(&self) -> &Expr {
+        &self.expr
+    }
+}
+
 impl Parse for StmtPrint {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtPrint {

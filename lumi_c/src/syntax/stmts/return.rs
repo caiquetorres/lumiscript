@@ -12,6 +12,12 @@ pub struct StmtReturn {
     _semicolon: Semicolon,
 }
 
+impl StmtReturn {
+    pub fn expr(&self) -> Option<&Expr> {
+        self.expr.as_ref()
+    }
+}
+
 impl Parse for StmtReturn {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtReturn {

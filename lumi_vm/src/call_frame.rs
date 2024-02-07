@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use compiler::generator::bytecode::Bytecode;
 use compiler::generator::obj::Obj;
 use compiler::generator::obj::ObjFunc;
@@ -12,15 +14,15 @@ pub(crate) struct CallFrame {
     /// A raw pointer to the associated `ObjectFunction`.
     function: *mut ObjFunc,
 
-    _slots: Vec<Obj>,
+    slots: HashMap<String, Obj>,
 }
 
 impl CallFrame {
-    pub(crate) fn new(function: *mut ObjFunc, slots: Vec<Obj>) -> Self {
+    pub(crate) fn new(function: *mut ObjFunc, slots: HashMap<String, Obj>) -> Self {
         Self {
             ip: 0,
             function,
-            _slots: slots,
+            slots,
         }
     }
 
@@ -55,8 +57,8 @@ impl CallFrame {
         unsafe { &*self.function }
     }
 
-    pub(crate) fn _slots(&self) -> &Vec<Obj> {
-        &self._slots
+    pub(crate) fn slots(&self) -> &HashMap<String, Obj> {
+        &self.slots
     }
 }
 

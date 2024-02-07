@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use compiler::generator::obj::Obj;
+use compiler::generator::obj::ObjCls;
 
 /// The `Scope` struct is designed to serve as a container for storing
 /// symbols actively in use within a specific scope. This allows for the
@@ -11,13 +12,15 @@ use compiler::generator::obj::Obj;
 /// any of its child scopes.
 #[derive(Debug, Clone)]
 struct Scope {
-    data: HashMap<String, Obj>,
+    variables: HashMap<String, Obj>,
+    impls: HashMap<(*mut ObjCls, String), Obj>,
 }
 
 impl Scope {
     fn new() -> Self {
         Self {
-            data: HashMap::new(),
+            variables: HashMap::new(),
+            impls: HashMap::new(),
         }
     }
 }
@@ -64,8 +67,23 @@ impl ScopeStack {
     /// - `object`: The object that is being inserted.
     pub(crate) fn insert(&mut self, ident: &str, object: Obj) {
         if let Some(current) = self.current() {
-            current.data.insert(ident.to_owned(), object);
+            current.variables.insert(ident.to_owned(), object);
         }
+    }
+
+    pub fn implement(&mut self, cls: *mut ObjCls, ident: &str, func: Obj) {
+        if let Some(current) = self.current() {
+            current.impls.insert((cls, ident.to_owned()), func);
+        }
+    }
+
+    pub fn get_implementation(&self, cls: *mut ObjCls, ident: &str) -> Option<Obj> {
+        for current in self.buffer.iter().rev() {
+            if let Some(obj) = current.impls.get(&(cls, ident.to_owned())) {
+                return Some(obj.clone());
+            }
+        }
+        None
     }
 
     /// Retrieves the object associated with the specified identifier by
@@ -80,9 +98,9 @@ impl ScopeStack {
     /// An `Option` containing the retrieved `Object` if the identifier is
     /// found, or `None` if the identifier is not present in any of the
     /// scopes.
-    pub(crate) fn get(&mut self, ident: &str) -> Option<Obj> {
-        for current in self.buffer.iter_mut().rev() {
-            if let Some(obj) = current.data.get(ident) {
+    pub(crate) fn get(&self, ident: &str) -> Option<Obj> {
+        for current in self.buffer.iter().rev() {
+            if let Some(obj) = current.variables.get(ident) {
                 return Some(obj.clone());
             }
         }

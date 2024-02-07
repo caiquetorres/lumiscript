@@ -7,11 +7,13 @@ use crate::syntax::r#type::Type;
 use crate::syntax::symbols::brace::LeftBrace;
 use crate::syntax::symbols::brace::RightBrace;
 use crate::syntax::symbols::class::Class;
+use crate::syntax::symbols::colon::Colon;
 use crate::syntax::symbols::ident::Ident;
 use crate::token;
 
 pub struct Field {
     ident: Ident,
+    _colon: Colon,
     ty: Type,
 }
 
@@ -19,6 +21,7 @@ impl Parse for Field {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(Field {
             ident: input.parse()?,
+            _colon: input.parse()?,
             ty: input.parse()?,
         })
     }

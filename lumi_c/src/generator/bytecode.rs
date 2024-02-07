@@ -26,6 +26,7 @@ pub enum Bytecode {
     InstantiateClass,
     DeclareFunc,
     Call,
+    Println,
     Return,
 }
 
