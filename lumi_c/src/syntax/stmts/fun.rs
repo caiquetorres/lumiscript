@@ -5,6 +5,7 @@ use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
 use crate::syntax::r#type::Type;
 use crate::syntax::symbols::arrow::Arrow;
+use crate::syntax::symbols::colon::Colon;
 use crate::syntax::symbols::fun::Fun;
 use crate::syntax::symbols::ident::Ident;
 use crate::syntax::symbols::paren::LeftParen;
@@ -16,9 +17,36 @@ use crate::token;
 
 use super::block::StmtBlock;
 
+pub struct ParamType {
+    _colon: Colon,
+    ty: Type,
+}
+
+impl Parse for ParamType {
+    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+        Ok(ParamType {
+            _colon: input.parse()?,
+            ty: input.parse()?,
+        })
+    }
+}
+
+impl Parse for Option<ParamType> {
+    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+        if input.peek() == token!(:) {
+            Ok(Some(ParamType {
+                _colon: input.parse()?,
+                ty: input.parse()?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
 pub struct Param {
     ident: Ident,
-    ty: Type,
+    ty: ParamType,
 }
 
 impl Parse for Param {
@@ -53,7 +81,7 @@ impl DisplayTree for Param {
     fn display(&self, layer: usize) {
         branch("Param", layer);
         self.ident.display(layer + 1);
-        self.ty.display(layer + 1);
+        self.ty.ty.display(layer + 1);
     }
 }
 
@@ -70,23 +98,14 @@ impl DisplayTree for Vec<Param> {
 
 pub struct ReturnType {
     _arrow: Arrow,
-    ident: Ident,
-    nullable: bool,
+    ty: Type,
 }
 
 impl Parse for ReturnType {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(ReturnType {
             _arrow: input.parse()?,
-            ident: input.parse()?,
-            nullable: {
-                if input.peek() == token!(?) {
-                    input.next();
-                    true
-                } else {
-                    false
-                }
-            },
+            ty: input.parse()?,
         })
     }
 }
@@ -94,23 +113,13 @@ impl Parse for ReturnType {
 impl Parse for Option<ReturnType> {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         if input.peek() == token!(->) {
-            Ok(Some(input.parse()?))
+            Ok(Some(ReturnType {
+                _arrow: input.parse()?,
+                ty: input.parse()?,
+            }))
         } else {
             Ok(None)
         }
-    }
-}
-
-impl DisplayTree for ReturnType {
-    fn display(&self, layer: usize) {
-        branch(
-            &format!(
-                "Return: {}{}",
-                self.ident.name(),
-                if self.nullable { "?" } else { "" }
-            ),
-            layer,
-        );
     }
 }
 
@@ -243,7 +252,7 @@ impl DisplayTree for StmtFun {
                 params.display(layer + 1);
 
                 if let Some(return_ty) = &return_ty {
-                    return_ty.display(layer + 1);
+                    return_ty.ty.display(layer + 1);
                 }
 
                 block.display(layer + 1);
@@ -258,7 +267,7 @@ impl DisplayTree for StmtFun {
                 params.display(layer + 1);
 
                 if let Some(return_ty) = &return_ty {
-                    return_ty.display(layer + 1);
+                    return_ty.ty.display(layer + 1);
                 }
             }
         }

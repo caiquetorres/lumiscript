@@ -4,20 +4,27 @@ use crate::token;
 
 use super::parse::Parse;
 use super::parse::ParseStream;
-use super::symbols::colon::Colon;
 use super::symbols::ident::Ident;
 use crate::syntax::display_tree::DisplayTree;
 
 pub struct Type {
-    _colon: Colon,
-    pub ident: Ident,
-    pub nullable: bool,
+    ident: Ident,
+    nullable: bool,
+}
+
+impl Type {
+    pub fn ident(&self) -> &Ident {
+        &self.ident
+    }
+
+    pub fn nullable(&self) -> bool {
+        self.nullable
+    }
 }
 
 impl Parse for Type {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(Type {
-            _colon: input.parse()?,
             ident: input.parse()?,
             nullable: {
                 if input.peek() == token!(?) {
@@ -28,16 +35,6 @@ impl Parse for Type {
                 }
             },
         })
-    }
-}
-
-impl Parse for Option<Type> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        if input.peek() == token!(:) {
-            Ok(Some(input.parse()?))
-        } else {
-            Ok(None)
-        }
     }
 }
 

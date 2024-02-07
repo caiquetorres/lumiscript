@@ -3,6 +3,7 @@ use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
+use crate::syntax::r#type::Type;
 use crate::syntax::span::Span;
 use crate::syntax::symbols::brace::LeftBrace;
 use crate::syntax::symbols::brace::RightBrace;
@@ -62,7 +63,7 @@ impl Parse for Option<Trait> {
 pub struct StmtImpl {
     _impl: Impl,
     r#tr: Option<Trait>,
-    ident: Ident,
+    ty: Type,
     _left_brace: LeftBrace,
     methods: Vec<StmtFun>,
     _right_brace: RightBrace,
@@ -73,7 +74,7 @@ impl Parse for StmtImpl {
         Ok(StmtImpl {
             _impl: input.parse()?,
             r#tr: input.parse()?,
-            ident: input.parse()?,
+            ty: input.parse()?,
             _left_brace: input.parse()?,
             methods: input.parse()?,
             _right_brace: input.parse()?,
@@ -89,7 +90,7 @@ impl DisplayTree for StmtImpl {
             tr.display(layer + 1);
         }
 
-        self.ident.display(layer + 1);
+        self.ty.display(layer + 1);
         self.methods.display(layer + 1);
     }
 }

@@ -5,6 +5,7 @@ use compiler::generator::generator::Generator;
 use compiler::generator::obj::ObjFunc;
 use compiler::scanner::lexer::Lexer;
 use compiler::syntax::ast::Ast;
+use compiler::syntax::display_tree::DisplayTree;
 use compiler::syntax::parse::ParseStream;
 use lumi_core::source_code::SourceCode;
 use type_checker::TypeChecker;
@@ -51,7 +52,7 @@ fn run(source_code: &str, should_type_check: bool) {
     }
 
     let ast = ast.unwrap();
-    // ast.display(0);
+    ast.display(0);
 
     if should_type_check {
         TypeChecker::check(&ast);
