@@ -1,11 +1,10 @@
 use std::fs;
 
 use clap::Parser;
-use compiler::generator::chunk::ObjectFunction;
 use compiler::generator::generator::Generator;
+use compiler::generator::obj::ObjFunc;
 use compiler::scanner::lexer::Lexer;
 use compiler::syntax::ast::Ast;
-use compiler::syntax::display_tree::DisplayTree;
 use compiler::syntax::parse::ParseStream;
 use lumi_core::source_code::SourceCode;
 use type_checker::TypeChecker;
@@ -58,12 +57,6 @@ fn run(source_code: &str, should_type_check: bool) {
         TypeChecker::check(&ast);
     }
 
-    // TODO: Emit bytes instead of creating the ObjectFunction here.
     let chunk = Generator::generate(&ast);
-
-    VirtualMachine::run(ObjectFunction {
-        arity: 0,
-        name: String::new(),
-        chunk,
-    });
+    VirtualMachine::run(ObjFunc::root(chunk));
 }
