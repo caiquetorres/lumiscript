@@ -16,7 +16,6 @@ pub struct ExprCall {
 
 impl Parse for ExprCall {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
-        println!("{:?}", input.cur());
         Ok(Self {
             callee: input.parse()?,
             left_paren: input.parse()?,

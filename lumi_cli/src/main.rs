@@ -1,7 +1,7 @@
 use std::fs;
 
 use clap::Parser;
-use compiler::generator::chunk::{Chunk, ObjectFunction};
+use compiler::generator::chunk::ObjectFunction;
 use compiler::generator::generator::Generator;
 use compiler::scanner::lexer::Lexer;
 use compiler::syntax::ast::Ast;
@@ -52,7 +52,7 @@ fn run(source_code: &str, should_type_check: bool) {
     }
 
     let ast = ast.unwrap();
-    ast.display(0);
+    // ast.display(0);
 
     if should_type_check {
         TypeChecker::check(&ast);

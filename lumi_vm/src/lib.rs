@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use compiler::generator::chunk::Bytecode;
 use compiler::generator::chunk::CallFrame;
 use compiler::generator::chunk::CallFrameStack;
-use compiler::generator::chunk::Constant;
+use compiler::generator::chunk::Object;
 use compiler::generator::chunk::ObjectClass;
 use compiler::generator::chunk::ObjectFunction;
 use compiler::generator::chunk::ObjectInstance;
@@ -13,7 +13,7 @@ pub struct VirtualMachine;
 #[derive(Debug)]
 struct Scope {
     parent: Option<Box<Scope>>,
-    data: HashMap<String, Constant>,
+    data: HashMap<String, Object>,
 }
 
 impl Scope {
@@ -31,11 +31,11 @@ impl Scope {
         }
     }
 
-    pub fn insert(&mut self, ident: &str, constant: Constant) {
+    pub fn insert(&mut self, ident: &str, constant: Object) {
         self.data.insert(ident.to_owned(), constant);
     }
 
-    pub fn get(&self, ident: &str) -> Option<Constant> {
+    pub fn get(&self, ident: &str) -> Option<Object> {
         if let Some(constant) = self.data.get(ident) {
             Some(constant.clone())
         } else if let Some(parent) = &self.parent {
@@ -52,7 +52,7 @@ impl VirtualMachine {
         let mut current_scope = global_scope;
 
         let mut frames = CallFrameStack::new();
-        let mut stack: Vec<Constant> = Vec::new();
+        let mut stack: Vec<Object> = Vec::new();
 
         let mut root_frame = Box::new(root_fun);
 
@@ -77,16 +77,13 @@ impl VirtualMachine {
                 }
                 Bytecode::DeclareFunc => {
                     let func = stack.pop().unwrap();
-                    let func_name = stack.pop().unwrap();
-
-                    if let Constant::Str(ident) = func_name {
-                        current_scope.insert(&ident, func);
-                    }
+                    let func_name = stack.pop().unwrap().as_str();
+                    current_scope.insert(&func_name, func);
                 }
                 Bytecode::Call => {
                     let func = stack.pop().unwrap();
 
-                    if let Constant::Func(func) = func {
+                    if let Object::Func(func) = func {
                         frames.add(CallFrame::new(func, vec![]));
                         should_update_counter = false;
                     }
@@ -95,137 +92,159 @@ impl VirtualMachine {
                     stack.push(frames.current().unwrap().function().chunk.get_constant(i))
                 }
                 Bytecode::GetVar => {
-                    let var = stack.pop().unwrap();
-                    if let Constant::Str(ident) = var {
-                        let constant = current_scope.get(&ident).unwrap();
-                        stack.push(constant.clone());
-                    }
+                    let ident = stack.pop().unwrap().as_str();
+                    let constant = current_scope.get(&ident).unwrap();
+                    stack.push(constant.clone());
                 }
                 Bytecode::SetVar => {
-                    let var = stack.pop().unwrap();
-                    if let Constant::Str(ident) = var {
-                        current_scope.insert(&ident, stack.pop().unwrap());
-                    }
+                    let ident = stack.pop().unwrap().as_str();
+                    current_scope.insert(&ident, stack.pop().unwrap());
                 }
                 Bytecode::DeclareClass => {
-                    let constant = stack.pop().unwrap();
-                    if let Constant::Str(name) = constant {
-                        let mut ptr = Box::new(ObjectClass { name: name.clone() });
-                        let class = Constant::Class(ptr.as_mut() as *mut ObjectClass);
+                    let fields_count = stack.pop().unwrap().as_float();
+                    let class_name = stack.pop().unwrap().as_str();
 
-                        current_scope.insert(&name, class);
-                        std::mem::forget(ptr); // avoid dropping the value when going out of scope.
+                    let mut ptr = Box::new(ObjectClass {
+                        name: class_name.clone(),
+                        fields_count: fields_count as u32,
+                    });
+
+                    let class = Object::Class(ptr.as_mut() as *mut ObjectClass);
+                    current_scope.insert(&class_name, class);
+
+                    std::mem::forget(ptr); // avoid dropping the value when going out of scope.
+                }
+                Bytecode::GetProp => {
+                    let prop = stack.pop().unwrap().as_str();
+                    let inst = stack.pop().unwrap().as_instance();
+
+                    unsafe {
+                        let inst = &*inst;
+                        let c = inst.get_prop(&prop).unwrap().clone();
+                        stack.push(c);
+                    }
+                }
+                Bytecode::SetProp => {
+                    let inst = stack.pop().unwrap().as_instance();
+                    let prop = stack.pop().unwrap().as_str();
+                    let value = stack.pop().unwrap();
+
+                    unsafe {
+                        let inst = &mut *inst;
+                        inst.set_prop(&prop, value);
                     }
                 }
                 Bytecode::InstantiateClass => {
-                    let constant = stack.pop().unwrap();
-                    if let Constant::Str(name) = constant {
-                        let c = current_scope.get(&name).unwrap();
-                        if let Constant::Class(class) = c {
-                            let mut ptr = Box::new(ObjectInstance { class });
-                            let instance = Constant::Instance(ptr.as_mut() as *mut ObjectInstance);
+                    let class_name = stack.pop().unwrap().as_str();
+                    let class = current_scope.get(&class_name).unwrap().as_class();
+                    let mut props = HashMap::new();
 
-                            stack.push(instance);
+                    unsafe {
+                        let obj_class = &*class;
 
-                            std::mem::forget(ptr); // avoid dropping the value when going out of scope.
+                        // REVIEW: I don't like this strategy, we're creating the fields based on their count.
+                        for _ in 0..obj_class.fields_count {
+                            let field_name = stack.pop().unwrap().as_str();
+                            let field_value = stack.pop().unwrap();
+                            props.insert(field_name, field_value);
                         }
                     }
+
+                    let mut ptr = Box::new(ObjectInstance::new(class, props));
+                    let instance = Object::Instance(ptr.as_mut() as *mut ObjectInstance);
+
+                    stack.push(instance);
+
+                    std::mem::forget(ptr); // avoid dropping the value when going out of scope.
                 }
                 Bytecode::GetConst => {
-                    let var = stack.pop().unwrap();
-                    if let Constant::Str(ident) = var {
-                        let constant = current_scope.get(&ident).unwrap();
-                        stack.push(constant.clone());
-                    }
+                    let ident = stack.pop().unwrap().as_str();
+                    let constant = current_scope.get(&ident).unwrap();
+                    stack.push(constant.clone());
                 }
                 Bytecode::SetConst => {
-                    let var = stack.pop().unwrap();
-                    if let Constant::Str(ident) = var {
-                        current_scope.data.insert(ident, stack.pop().unwrap());
-                    }
+                    let ident = stack.pop().unwrap().as_str();
+                    current_scope.data.insert(ident, stack.pop().unwrap());
                 }
                 Bytecode::Add => {
-                    let operand2 = stack.pop().unwrap();
-                    let operand1 = stack.pop().unwrap();
+                    let val1 = stack.pop().unwrap().as_float();
+                    let val2 = stack.pop().unwrap().as_float();
+                    let result = val1 + val2;
 
-                    if let (Constant::Float(val1), Constant::Float(val2)) = (operand1, operand2) {
-                        let result = val1 + val2;
-                        stack.push(Constant::Float(result));
-                    }
+                    stack.push(Object::Float(result));
                 }
                 Bytecode::Subtract => {
                     let operand2 = stack.pop().unwrap();
                     let operand1 = stack.pop().unwrap();
 
-                    if let (Constant::Float(val1), Constant::Float(val2)) = (operand1, operand2) {
+                    if let (Object::Float(val1), Object::Float(val2)) = (operand1, operand2) {
                         let result = val1 - val2;
-                        stack.push(Constant::Float(result));
+                        stack.push(Object::Float(result));
                     }
                 }
                 Bytecode::Multiply => {
                     let operand2 = stack.pop().unwrap();
                     let operand1 = stack.pop().unwrap();
 
-                    if let (Constant::Float(val1), Constant::Float(val2)) = (operand1, operand2) {
+                    if let (Object::Float(val1), Object::Float(val2)) = (operand1, operand2) {
                         let result = val1 * val2;
-                        stack.push(Constant::Float(result));
+                        stack.push(Object::Float(result));
                     }
                 }
                 Bytecode::Divide => {
                     let operand2 = stack.pop().unwrap();
                     let operand1 = stack.pop().unwrap();
 
-                    if let (Constant::Float(val1), Constant::Float(val2)) = (operand1, operand2) {
+                    if let (Object::Float(val1), Object::Float(val2)) = (operand1, operand2) {
                         let result = val1 / val2;
-                        stack.push(Constant::Float(result));
+                        stack.push(Object::Float(result));
                     }
                 }
                 Bytecode::Equal => {
                     let operand2 = stack.pop().unwrap();
                     let operand1 = stack.pop().unwrap();
 
-                    if let (Constant::Float(val1), Constant::Float(val2)) = (&operand1, &operand2) {
+                    if let (Object::Float(val1), Object::Float(val2)) = (&operand1, &operand2) {
                         let result = val1 == val2;
-                        stack.push(Constant::Bool(result));
-                    } else if let (Constant::Bool(val1), Constant::Bool(val2)) =
-                        (&operand1, &operand2)
+                        stack.push(Object::Bool(result));
+                    } else if let (Object::Bool(val1), Object::Bool(val2)) = (&operand1, &operand2)
                     {
                         let result = val1 == val2;
-                        stack.push(Constant::Bool(result));
+                        stack.push(Object::Bool(result));
                     }
                 }
                 Bytecode::Greater => {
                     let operand2 = stack.pop().unwrap();
                     let operand1 = stack.pop().unwrap();
 
-                    if let (Constant::Float(val1), Constant::Float(val2)) = (operand1, operand2) {
+                    if let (Object::Float(val1), Object::Float(val2)) = (operand1, operand2) {
                         let result = val1 > val2;
-                        stack.push(Constant::Bool(result));
+                        stack.push(Object::Bool(result));
                     }
                 }
                 Bytecode::Less => {
                     let operand2 = stack.pop().unwrap();
                     let operand1 = stack.pop().unwrap();
 
-                    if let (Constant::Float(val1), Constant::Float(val2)) = (operand1, operand2) {
+                    if let (Object::Float(val1), Object::Float(val2)) = (operand1, operand2) {
                         let result = val1 < val2;
-                        stack.push(Constant::Bool(result));
+                        stack.push(Object::Bool(result));
                     }
                 }
                 Bytecode::Negate => {
                     let num = stack.pop().unwrap();
 
-                    if let Constant::Float(val) = num {
+                    if let Object::Float(val) = num {
                         let result = -val;
-                        stack.push(Constant::Float(result));
+                        stack.push(Object::Float(result));
                     }
                 }
                 Bytecode::Not => {
                     let num = stack.pop().unwrap();
 
-                    if let Constant::Bool(val) = num {
+                    if let Object::Bool(val) = num {
                         let result = !val;
-                        stack.push(Constant::Bool(result));
+                        stack.push(Object::Bool(result));
                     }
                 }
                 Bytecode::Return => {
@@ -234,6 +253,11 @@ impl VirtualMachine {
                 Bytecode::Pop => {
                     if let Some(result) = stack.pop() {
                         println!("{:?}", result);
+                        // if let Object::Instance(inst) = result {
+                        //     unsafe {
+                        //         println!("{:?}", &*inst);
+                        //     }
+                        // }
                     }
                 }
             }

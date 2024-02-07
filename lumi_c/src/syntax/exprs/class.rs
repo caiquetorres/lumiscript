@@ -16,6 +16,12 @@ pub struct Init {
     expr: Expr,
 }
 
+impl Init {
+    pub fn expr(&self) -> &Expr {
+        &self.expr
+    }
+}
+
 impl Parse for Init {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(Init {
@@ -41,6 +47,16 @@ impl Parse for Option<Init> {
 pub struct FieldInit {
     ident: Ident,
     init: Option<Init>,
+}
+
+impl FieldInit {
+    pub fn ident(&self) -> &Ident {
+        &self.ident
+    }
+
+    pub fn init(&self) -> &Option<Init> {
+        &self.init
+    }
 }
 
 impl Parse for FieldInit {

@@ -7,6 +7,8 @@ use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
 use crate::syntax::span::Span;
+use crate::syntax::symbols::paren::LeftParen;
+use crate::syntax::symbols::paren::RightParen;
 
 use super::assign::ExprAssign;
 use super::binary::ExprBinary;
@@ -256,11 +258,13 @@ fn primary(input: &mut ParseStream) -> Result<Expr, String> {
         token!(false) | token!(true) => Ok(Expr::Lit(ExprLit::Bool {
             span: Span::from_token(input.next()),
         })),
-        token!('(') => Ok(Expr::Paren(ExprParen {
-            left_paren: input.parse()?,
-            expr: input.parse()?,
-            right_paren: input.parse()?,
-        })),
+        token!('(') => {
+            // REVIEW: Is a good solution ignoring the parenthesis?
+            input.parse::<LeftParen>()?;
+            let expr: Expr = input.parse()?;
+            input.parse::<RightParen>()?;
+            Ok(expr)
+        }
         _ => {
             let start = input.cur().span.start;
             input.error_reporter().report("Expression expected", start);

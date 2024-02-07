@@ -71,6 +71,10 @@ impl StmtClass {
     pub fn name(&self) -> String {
         self.ident.name()
     }
+
+    pub fn fields(&self) -> &Vec<Field> {
+        &self.fields
+    }
 }
 
 impl Parse for StmtClass {

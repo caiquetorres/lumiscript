@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -16,8 +16,10 @@ pub enum Bytecode {
     Greater,
     Less,
     Pop,
-    SetVar,
     GetVar,
+    SetVar,
+    GetProp,
+    SetProp,
     SetConst,
     GetConst,
     DeclareClass,
@@ -37,7 +39,7 @@ impl Display for Bytecode {
 // TODO: We should add the Prim (primitive) variant.
 
 #[derive(Debug, Clone)]
-pub enum Constant {
+pub enum Object {
     Nil,
     Bool(bool),
     Float(f64),
@@ -47,9 +49,54 @@ pub enum Constant {
     Func(*mut ObjectFunction),
 }
 
-#[derive(Debug)]
-pub struct ObjectInstance {
-    pub class: *mut ObjectClass,
+impl Object {
+    pub fn as_bool(&self) -> bool {
+        if let Object::Bool(value) = self {
+            *value
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn as_float(&self) -> f64 {
+        if let Object::Float(value) = self {
+            *value
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn as_str(&self) -> String {
+        if let Object::Str(value) = self {
+            value.clone()
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn as_instance(&self) -> *mut ObjectInstance {
+        if let Object::Instance(value) = self {
+            *value
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn as_class(&self) -> *mut ObjectClass {
+        if let Object::Class(value) = self {
+            *value
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn as_function(&self) -> *mut ObjectFunction {
+        if let Object::Func(value) = self {
+            *value
+        } else {
+            panic!();
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -62,9 +109,34 @@ pub struct ObjectFunction {
 #[derive(Debug)]
 pub struct ObjectClass {
     pub name: String,
+    pub fields_count: u32,
 }
 
-impl Display for Constant {
+#[derive(Debug)]
+pub struct ObjectInstance {
+    class: *mut ObjectClass,
+    props: HashMap<String, Object>,
+}
+
+impl ObjectInstance {
+    pub fn new(class: *mut ObjectClass, props: HashMap<String, Object>) -> Self {
+        Self { class, props }
+    }
+
+    pub fn class_ptr(&self) -> *mut ObjectClass {
+        *&self.class
+    }
+
+    pub fn get_prop(&self, prop_name: &str) -> Option<Object> {
+        self.props.get(prop_name).map(|obj| obj.clone())
+    }
+
+    pub fn set_prop(&mut self, prop_name: &str, prop_value: Object) {
+        self.props.insert(prop_name.to_owned(), prop_value);
+    }
+}
+
+impl Display for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
@@ -74,11 +146,11 @@ impl Display for Constant {
 pub struct CallFrame {
     ip: usize,
     function: *mut ObjectFunction,
-    pub slots: Vec<Constant>,
+    pub slots: Vec<Object>,
 }
 
 impl CallFrame {
-    pub fn new(function: *mut ObjectFunction, slots: Vec<Constant>) -> Self {
+    pub fn new(function: *mut ObjectFunction, slots: Vec<Object>) -> Self {
         Self {
             ip: 0,
             function,
@@ -138,7 +210,7 @@ impl CallFrameStack {
 #[derive(Debug, Clone)]
 pub struct Chunk {
     buffer: Vec<Bytecode>,
-    constants: Vec<Constant>,
+    constants: Vec<Object>,
 }
 
 impl Chunk {
@@ -157,12 +229,12 @@ impl Chunk {
         self.buffer.push(op_code);
     }
 
-    pub fn add_constant(&mut self, constant: Constant) -> usize {
+    pub fn add_constant(&mut self, constant: Object) -> usize {
         self.constants.push(constant);
         self.constants.len() - 1
     }
 
-    pub fn get_constant(&self, i: usize) -> Constant {
+    pub fn get_constant(&self, i: usize) -> Object {
         self.constants[i].clone()
     }
 }
