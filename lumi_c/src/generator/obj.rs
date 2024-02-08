@@ -15,6 +15,7 @@ pub enum Obj {
     Class(*mut ObjCls),
     Func(*mut ObjFunc),
     NativeFunc(*mut ObjNativeFunc),
+    BoundMethod(*mut ObjBoundMethod),
 }
 
 impl Obj {
@@ -76,6 +77,12 @@ impl Obj {
 }
 
 #[derive(Debug)]
+pub struct ObjBoundMethod {
+    pub this: *mut ObjInst,
+    pub func: *mut ObjFunc,
+}
+
+#[derive(Debug)]
 pub struct ObjFunc {
     pub name: String,
     pub params: Vec<String>,
@@ -100,6 +107,7 @@ pub struct ObjNativeFunc {
 #[derive(Debug)]
 pub struct ObjCls {
     pub name: String,
+    // TODO: Replace the fields_count for a hash set or a vec.
     pub fields_count: u32,
 }
 

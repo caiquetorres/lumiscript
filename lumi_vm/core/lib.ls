@@ -1,3 +1,15 @@
+trait Copy {
+    fun copy() -> This;
+}
+
+impl Copy for Num {
+    extern fun copy() -> This;
+}
+
+impl Copy for Bool {
+    extern fun copy() -> This;
+}
+
 trait ToBool {
     fun toBool() -> bool;
 }

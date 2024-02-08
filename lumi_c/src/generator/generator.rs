@@ -12,9 +12,59 @@ trait Generate {
     fn generate(&self, chunk: &mut Chunk);
 }
 
+impl Generate for StmtFun {
+    fn generate(&self, chunk: &mut Chunk) {
+        match self {
+            StmtFun::Default {
+                ident,
+                params,
+                block,
+                ..
+            } => {
+                let mut new_chunk = Chunk::new();
+                new_chunk.write_op(Bytecode::BeginScope);
+
+                for stmt in block.stmts() {
+                    stmt.generate(&mut new_chunk);
+                }
+
+                new_chunk.write_op(Bytecode::Return);
+                new_chunk.write_op(Bytecode::EndScope);
+
+                let mut func = Box::new(ObjFunc {
+                    params: params.iter().map(|param| param.ident().name()).collect(),
+                    name: ident.name().clone(),
+                    chunk: new_chunk,
+                });
+
+                let i = chunk.add_constant(Obj::Func(func.as_mut() as *mut ObjFunc));
+                chunk.write_op(Bytecode::LoadConstant(i));
+
+                let i = chunk.add_constant(Obj::Str(ident.name()));
+                chunk.write_op(Bytecode::LoadConstant(i));
+
+                std::mem::forget(func); // avoid dropping the value when going out of scope.
+            }
+            StmtFun::Proto { .. } => {
+                // ignore, prototypes are only used for trait declarations and in the semantic analysis step.
+            }
+        }
+    }
+}
+
 impl Generate for Stmt {
     fn generate(&self, chunk: &mut Chunk) {
         match self {
+            Stmt::Impl(im) => {
+                for method in im.methods() {
+                    method.generate(chunk);
+
+                    let i = chunk.add_constant(Obj::Str(im.ty().ident().name().clone()));
+                    chunk.write_op(Bytecode::LoadConstant(i));
+                }
+
+                chunk.write_op(Bytecode::DeclareMethod);
+            }
             Stmt::Print(print) => {
                 print.expr().generate(chunk);
                 chunk.write_op(Bytecode::Println);
@@ -29,42 +79,8 @@ impl Generate for Stmt {
                 chunk.write_op(Bytecode::EndScope);
             }
             Stmt::Fun(func) => {
-                match func {
-                    StmtFun::Default {
-                        ident,
-                        params,
-                        block,
-                        ..
-                    } => {
-                        let mut new_chunk = Chunk::new();
-                        new_chunk.write_op(Bytecode::BeginScope);
-
-                        for stmt in block.stmts() {
-                            stmt.generate(&mut new_chunk);
-                        }
-
-                        new_chunk.write_op(Bytecode::EndScope);
-
-                        let mut func = Box::new(ObjFunc {
-                            params: params.iter().map(|param| param.ident().name()).collect(),
-                            name: ident.name().clone(),
-                            chunk: new_chunk,
-                        });
-
-                        let i = chunk.add_constant(Obj::Func(func.as_mut() as *mut ObjFunc));
-                        chunk.write_op(Bytecode::LoadConstant(i));
-
-                        let i = chunk.add_constant(Obj::Str(ident.name()));
-                        chunk.write_op(Bytecode::LoadConstant(i));
-
-                        chunk.write_op(Bytecode::DeclareFunc);
-
-                        std::mem::forget(func); // avoid dropping the value when going out of scope.
-                    }
-                    StmtFun::Proto { .. } => {
-                        // ignore, prototypes are only used for trait declarations and in the semantic analysis step.
-                    }
-                }
+                func.generate(chunk);
+                chunk.write_op(Bytecode::DeclareFunc);
             }
             Stmt::Let(stmt) => {
                 stmt.expr().generate(chunk);

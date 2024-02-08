@@ -69,6 +69,16 @@ pub struct StmtImpl {
     _right_brace: RightBrace,
 }
 
+impl StmtImpl {
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
+
+    pub fn methods(&self) -> &Vec<StmtFun> {
+        &self.methods
+    }
+}
+
 impl Parse for StmtImpl {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtImpl {

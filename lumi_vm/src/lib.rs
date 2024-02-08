@@ -8,6 +8,7 @@ use call_frame::CallFrame;
 use call_frame::CallFrameStack;
 use compiler::generator::bytecode::Bytecode;
 use compiler::generator::obj::Obj;
+use compiler::generator::obj::ObjBoundMethod;
 use compiler::generator::obj::ObjCls;
 use compiler::generator::obj::ObjFunc;
 use compiler::generator::obj::ObjInst;
@@ -53,6 +54,7 @@ impl VirtualMachine {
             match instruction {
                 Bytecode::Println => {
                     let obj = stack.pop().unwrap();
+
                     match obj {
                         Obj::Nil => println!("nil"),
                         Obj::Float(value) => println!("{}", value),
@@ -81,17 +83,56 @@ impl VirtualMachine {
                 }
                 Bytecode::EndScope => {
                     scope_stack.pop();
-                    frames.pop();
                 }
                 Bytecode::DeclareFunc => {
                     let func_name = stack.pop().unwrap().as_str();
                     let func = stack.pop().unwrap();
                     scope_stack.insert(&func_name, func);
                 }
+                Bytecode::DeclareMethod => {
+                    let class_name = stack.pop().unwrap().as_str();
+                    let func_name = stack.pop().unwrap().as_str();
+                    let func = stack.pop().unwrap().as_function();
+
+                    let class = scope_stack.get(&class_name).unwrap().as_class();
+
+                    scope_stack.set_method(class, &func_name, func);
+                }
                 Bytecode::Call => {
                     let func = stack.pop().unwrap();
 
-                    if let Obj::Func(func) = func {
+                    if let Obj::BoundMethod(method) = func {
+                        unsafe {
+                            let method = &*method;
+                            let func = method.func;
+                            let arity = stack.pop().map(|obj| obj.as_float());
+
+                            let mut args = vec![];
+
+                            if let Some(arity) = arity {
+                                for _ in 0..arity as u8 {
+                                    let arg = stack.pop().unwrap();
+                                    args.push(arg);
+                                }
+                            }
+
+                            let inst = &*method.this;
+
+                            let mut slots = HashMap::new();
+                            slots.insert("this".to_owned(), Obj::Instance(method.this));
+                            slots.insert("This".to_owned(), Obj::Class(inst.class_ptr()));
+
+                            {
+                                let func = &*func;
+                                for i in 0..func.params.len() {
+                                    slots.insert(func.params[i].clone(), args[i].clone());
+                                }
+                            }
+
+                            frames.push(CallFrame::new(func, slots));
+                            should_update_counter = false;
+                        }
+                    } else if let Obj::Func(func) = func {
                         let arity = stack.pop().map(|obj| obj.as_float());
 
                         let mut args = vec![];
@@ -165,12 +206,23 @@ impl VirtualMachine {
                 }
                 Bytecode::GetProp => {
                     let prop = stack.pop().unwrap().as_str();
-                    let inst = stack.pop().unwrap().as_instance();
+                    let inst_ptr = stack.pop().unwrap().as_instance();
 
                     unsafe {
-                        let inst = &*inst;
-                        let c = inst.prop(&prop).unwrap().clone();
-                        stack.push(c);
+                        let inst = &*inst_ptr;
+                        if let Some(method) = scope_stack.method(inst.class_ptr(), &prop) {
+                            let mut b = Box::new(ObjBoundMethod {
+                                this: inst_ptr,
+                                func: method,
+                            });
+
+                            stack.push(Obj::BoundMethod(b.as_mut() as *mut ObjBoundMethod));
+
+                            std::mem::forget(b);
+                        } else {
+                            let c = inst.prop(&prop).unwrap().clone();
+                            stack.push(c);
+                        }
                     }
                 }
                 Bytecode::SetProp => {
@@ -300,7 +352,9 @@ impl VirtualMachine {
                 Bytecode::Pop => {
                     stack.pop();
                 }
-                Bytecode::Return => {}
+                Bytecode::Return => {
+                    frames.pop();
+                }
             }
 
             if should_update_counter {

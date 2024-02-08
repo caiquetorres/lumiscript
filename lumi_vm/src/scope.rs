@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use compiler::generator::obj::Obj;
-use compiler::generator::obj::ObjCls;
+use compiler::generator::obj::{Obj, ObjCls, ObjFunc};
 
 /// The `Scope` struct is designed to serve as a container for storing
 /// symbols actively in use within a specific scope. This allows for the
@@ -12,15 +11,15 @@ use compiler::generator::obj::ObjCls;
 /// any of its child scopes.
 #[derive(Debug, Clone)]
 struct Scope {
-    variables: HashMap<String, Obj>,
-    impls: HashMap<(*mut ObjCls, String), Obj>,
+    symbols: HashMap<String, Obj>,
+    methods: HashMap<(*mut ObjCls, String), *mut ObjFunc>,
 }
 
 impl Scope {
     fn new() -> Self {
         Self {
-            variables: HashMap::new(),
-            impls: HashMap::new(),
+            symbols: HashMap::new(),
+            methods: HashMap::new(),
         }
     }
 }
@@ -67,19 +66,19 @@ impl ScopeStack {
     /// - `object`: The object that is being inserted.
     pub(crate) fn insert(&mut self, ident: &str, object: Obj) {
         if let Some(current) = self.current() {
-            current.variables.insert(ident.to_owned(), object);
+            current.symbols.insert(ident.to_owned(), object);
         }
     }
 
-    pub fn implement(&mut self, cls: *mut ObjCls, ident: &str, func: Obj) {
+    pub fn set_method(&mut self, cls: *mut ObjCls, ident: &str, method: *mut ObjFunc) {
         if let Some(current) = self.current() {
-            current.impls.insert((cls, ident.to_owned()), func);
+            current.methods.insert((cls, ident.to_owned()), method);
         }
     }
 
-    pub fn get_implementation(&self, cls: *mut ObjCls, ident: &str) -> Option<Obj> {
+    pub fn method(&self, cls: *mut ObjCls, ident: &str) -> Option<*mut ObjFunc> {
         for current in self.buffer.iter().rev() {
-            if let Some(obj) = current.impls.get(&(cls, ident.to_owned())) {
+            if let Some(obj) = current.methods.get(&(cls, ident.to_owned())) {
                 return Some(obj.clone());
             }
         }
@@ -100,7 +99,7 @@ impl ScopeStack {
     /// scopes.
     pub(crate) fn get(&self, ident: &str) -> Option<Obj> {
         for current in self.buffer.iter().rev() {
-            if let Some(obj) = current.variables.get(ident) {
+            if let Some(obj) = current.symbols.get(ident) {
                 return Some(obj.clone());
             }
         }
