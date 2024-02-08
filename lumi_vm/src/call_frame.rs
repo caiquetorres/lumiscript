@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
 use compiler::generator::bytecode::Bytecode;
-use compiler::generator::obj::Obj;
-use compiler::generator::obj::ObjFunc;
+use compiler::generator::constant::Constant;
+
+use crate::obj::Obj;
+use crate::obj::ObjFunc;
 
 /// Represents a call frame used in the execution of the virtual machine.
 #[derive(Debug)]
@@ -40,17 +42,8 @@ impl CallFrame {
             .map(|bytecode| *bytecode)
     }
 
-    /// Retrieves the `Object` associated with the specified position in
-    /// the bytecode chunk of the associated function.
-    ///
-    /// # Parameters
-    /// - `pos`: The object's position/index in the bytecode chunk.
-    ///
-    /// # Returns
-    /// An `Option` containing the retrieved `Object` if available at the
-    /// specified position, or `None` if the position is out of bounds.
-    pub(crate) fn object(&self, pos: usize) -> Option<Obj> {
-        self.function().chunk.object(pos)
+    pub(crate) fn constant(&self, pos: usize) -> Option<Constant> {
+        self.function().chunk.constant(pos)
     }
 
     pub(crate) fn function(&self) -> &ObjFunc {

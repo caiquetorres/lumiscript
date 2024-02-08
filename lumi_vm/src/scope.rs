@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use compiler::generator::obj::{Obj, ObjCls, ObjFunc};
+use crate::obj::Obj;
+use crate::obj::ObjClass;
 
 /// The `Scope` struct is designed to serve as a container for storing
 /// symbols actively in use within a specific scope. This allows for the
@@ -12,7 +13,7 @@ use compiler::generator::obj::{Obj, ObjCls, ObjFunc};
 #[derive(Debug, Clone)]
 struct Scope {
     symbols: HashMap<String, Obj>,
-    methods: HashMap<(*mut ObjCls, String), *mut ObjFunc>,
+    methods: HashMap<(*mut ObjClass, String), Obj>,
 }
 
 impl Scope {
@@ -70,13 +71,13 @@ impl ScopeStack {
         }
     }
 
-    pub fn set_method(&mut self, cls: *mut ObjCls, ident: &str, method: *mut ObjFunc) {
+    pub fn set_method(&mut self, cls: *mut ObjClass, ident: &str, method: Obj) {
         if let Some(current) = self.current() {
             current.methods.insert((cls, ident.to_owned()), method);
         }
     }
 
-    pub fn method(&self, cls: *mut ObjCls, ident: &str) -> Option<*mut ObjFunc> {
+    pub fn method(&self, cls: *mut ObjClass, ident: &str) -> Option<Obj> {
         for current in self.buffer.iter().rev() {
             if let Some(obj) = current.methods.get(&(cls, ident.to_owned())) {
                 return Some(obj.clone());

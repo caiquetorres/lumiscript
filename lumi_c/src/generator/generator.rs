@@ -6,7 +6,8 @@ use crate::syntax::stmts::stmt::Stmt;
 
 use super::bytecode::Bytecode;
 use super::chunk::Chunk;
-use super::obj::{Obj, ObjFunc};
+use super::constant::ConstFunc;
+use super::constant::Constant;
 
 trait Generate {
     fn generate(&self, chunk: &mut Chunk);
@@ -31,19 +32,14 @@ impl Generate for StmtFun {
                 new_chunk.write_op(Bytecode::Return);
                 new_chunk.write_op(Bytecode::EndScope);
 
-                let mut func = Box::new(ObjFunc {
-                    params: params.iter().map(|param| param.ident().name()).collect(),
-                    name: ident.name().clone(),
-                    chunk: new_chunk,
-                });
+                let func = ConstFunc::new(
+                    &ident.name(),
+                    params.iter().map(|param| param.ident().name()).collect(),
+                    new_chunk,
+                );
 
-                let i = chunk.add_constant(Obj::Func(func.as_mut() as *mut ObjFunc));
-                chunk.write_op(Bytecode::LoadConstant(i));
-
-                let i = chunk.add_constant(Obj::Str(ident.name()));
-                chunk.write_op(Bytecode::LoadConstant(i));
-
-                std::mem::forget(func); // avoid dropping the value when going out of scope.
+                chunk.load_constant(Constant::Func(func));
+                chunk.load_constant(Constant::Str(ident.name()));
             }
             StmtFun::Proto { .. } => {
                 // ignore, prototypes are only used for trait declarations and in the semantic analysis step.
@@ -56,14 +52,14 @@ impl Generate for Stmt {
     fn generate(&self, chunk: &mut Chunk) {
         match self {
             Stmt::Impl(im) => {
-                for method in im.methods() {
-                    method.generate(chunk);
+                if !im.methods().is_empty() {
+                    for method in im.methods() {
+                        method.generate(chunk);
+                        chunk.load_constant(Constant::Str(im.ty().ident().name().clone()));
+                    }
 
-                    let i = chunk.add_constant(Obj::Str(im.ty().ident().name().clone()));
-                    chunk.write_op(Bytecode::LoadConstant(i));
+                    chunk.write_op(Bytecode::DeclareMethod);
                 }
-
-                chunk.write_op(Bytecode::DeclareMethod);
             }
             Stmt::Print(print) => {
                 print.expr().generate(chunk);
@@ -84,14 +80,12 @@ impl Generate for Stmt {
             }
             Stmt::Let(stmt) => {
                 stmt.expr().generate(chunk);
-                let i = chunk.add_constant(Obj::Str(stmt.ident().name()));
-                chunk.write_op(Bytecode::LoadConstant(i));
+                chunk.load_constant(Constant::Str(stmt.ident().name()));
                 chunk.write_op(Bytecode::SetVar);
             }
             Stmt::Const(stmt) => {
                 stmt.expr().generate(chunk);
-                let i = chunk.add_constant(Obj::Str(stmt.ident().name()));
-                chunk.write_op(Bytecode::LoadConstant(i));
+                chunk.load_constant(Constant::Str(stmt.ident().name()));
                 chunk.write_op(Bytecode::SetVar);
             }
             Stmt::Expr(expr) => {
@@ -102,19 +96,13 @@ impl Generate for Stmt {
                 if let Some(expr) = rt.expr() {
                     expr.generate(chunk);
                 } else {
-                    let i = chunk.add_constant(Obj::Nil);
-                    chunk.write_op(Bytecode::LoadConstant(i));
+                    chunk.load_constant(Constant::Nil);
                 }
-
                 chunk.write_op(Bytecode::Return);
             }
             Stmt::Class(class) => {
-                let i = chunk.add_constant(Obj::Str(class.name()));
-                chunk.write_op(Bytecode::LoadConstant(i));
-
-                let i = chunk.add_constant(Obj::Float(class.fields().len() as f64));
-                chunk.write_op(Bytecode::LoadConstant(i));
-
+                chunk.load_constant(Constant::Str(class.name()));
+                chunk.load_constant(Constant::Num(class.fields().len() as f64));
                 chunk.write_op(Bytecode::DeclareClass);
             }
             _ => {}
@@ -126,14 +114,12 @@ impl Generate for Expr {
     fn generate(&self, chunk: &mut Chunk) {
         match self {
             Expr::Ident(ident) => {
-                let i = chunk.add_constant(Obj::Str(ident.ident.name()));
-                chunk.write_op(Bytecode::LoadConstant(i));
+                chunk.load_constant(Constant::Str(ident.ident.name()));
                 chunk.write_op(Bytecode::GetVar);
             }
             Expr::Get(get) => {
                 get.expr.generate(chunk);
-                let i = chunk.add_constant(Obj::Str(get.ident.name()));
-                chunk.write_op(Bytecode::LoadConstant(i));
+                chunk.load_constant(Constant::Str(get.ident.name()));
                 chunk.write_op(Bytecode::GetProp);
             }
             Expr::Assign(assign) => {
@@ -141,13 +127,11 @@ impl Generate for Expr {
 
                 match assign.left.as_ref() {
                     Expr::Ident(ident) => {
-                        let i = chunk.add_constant(Obj::Str(ident.ident.name()));
-                        chunk.write_op(Bytecode::LoadConstant(i));
+                        chunk.load_constant(Constant::Str(ident.ident.name()));
                         chunk.write_op(Bytecode::SetVar);
                     }
                     Expr::Get(get) => {
-                        let i = chunk.add_constant(Obj::Str(get.ident.name()));
-                        chunk.write_op(Bytecode::LoadConstant(i));
+                        chunk.load_constant(Constant::Str(get.ident.name()));
                         get.expr.generate(chunk);
                         chunk.write_op(Bytecode::SetProp);
                     }
@@ -156,18 +140,18 @@ impl Generate for Expr {
             }
             Expr::Lit(lit) => match lit {
                 ExprLit::Nil { .. } => {
-                    let i = chunk.add_constant(Obj::Nil);
-                    chunk.write_op(Bytecode::LoadConstant(i));
+                    chunk.load_constant(Constant::Nil);
+                    chunk.write_op(Bytecode::Lit);
                 }
                 ExprLit::Num { span } => {
                     let value: f64 = span.source_text.parse().unwrap();
-                    let i = chunk.add_constant(Obj::Float(value));
-                    chunk.write_op(Bytecode::LoadConstant(i));
+                    chunk.load_constant(Constant::Num(value));
+                    chunk.write_op(Bytecode::Lit);
                 }
                 ExprLit::Bool { span } => {
                     let value: bool = span.source_text.parse().unwrap();
-                    let i = chunk.add_constant(Obj::Bool(value));
-                    chunk.write_op(Bytecode::LoadConstant(i));
+                    chunk.load_constant(Constant::Bool(value));
+                    chunk.write_op(Bytecode::Lit);
                 }
             },
             Expr::Unary(unary) => {
@@ -183,12 +167,8 @@ impl Generate for Expr {
                 for arg in call.args.iter().rev() {
                     arg.generate(chunk);
                 }
-
-                let i = chunk.add_constant(Obj::Float(call.args.len() as f64));
-                chunk.write_op(Bytecode::LoadConstant(i));
-
+                chunk.load_constant(Constant::Num(call.args.len() as f64));
                 call.callee.generate(chunk);
-
                 chunk.write_op(Bytecode::Call);
             }
             Expr::Paren(paren) => paren.expr.generate(chunk),
@@ -226,18 +206,15 @@ impl Generate for Expr {
                     if let Some(init) = field_init.init() {
                         init.expr().generate(chunk);
                     } else {
-                        let i = chunk.add_constant(Obj::Str(name.clone()));
-                        chunk.write_op(Bytecode::LoadConstant(i));
+                        chunk.load_constant(Constant::Str(name.clone()));
                         chunk.write_op(Bytecode::GetVar);
                     }
 
-                    let i = chunk.add_constant(Obj::Str(name));
-                    chunk.write_op(Bytecode::LoadConstant(i));
+                    chunk.load_constant(Constant::Str(name));
                 }
 
                 if let Expr::Ident(ident) = class.class.as_ref() {
-                    let i = chunk.add_constant(Obj::Str(ident.ident.name()));
-                    chunk.write_op(Bytecode::LoadConstant(i));
+                    chunk.load_constant(Constant::Str(ident.ident.name()));
                 }
 
                 chunk.write_op(Bytecode::InstantiateClass);

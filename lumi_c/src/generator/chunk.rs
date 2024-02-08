@@ -1,10 +1,10 @@
 use super::bytecode::Bytecode;
-use super::obj::Obj;
+use super::constant::Constant;
 
 #[derive(Debug, Clone)]
 pub struct Chunk {
     buffer: Vec<Bytecode>,
-    objects: Vec<Obj>,
+    objects: Vec<Constant>,
 }
 
 impl Chunk {
@@ -15,6 +15,12 @@ impl Chunk {
         }
     }
 
+    pub fn load_constant(&mut self, constant: Constant) {
+        self.objects.push(constant);
+        let pos = self.objects.len() - 1;
+        self.write_op(Bytecode::LoadConstant(pos));
+    }
+
     pub fn buffer(&self) -> &Vec<Bytecode> {
         &self.buffer
     }
@@ -23,12 +29,7 @@ impl Chunk {
         self.buffer.push(bytecode);
     }
 
-    pub fn add_constant(&mut self, constant: Obj) -> usize {
-        self.objects.push(constant);
-        self.objects.len() - 1
-    }
-
-    pub fn object(&self, i: usize) -> Option<Obj> {
+    pub fn constant(&self, i: usize) -> Option<Constant> {
         self.objects.get(i).cloned()
     }
 }

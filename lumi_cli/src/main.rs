@@ -2,13 +2,13 @@ use std::fs;
 
 use clap::Parser;
 use compiler::generator::generator::Generator;
-use compiler::generator::obj::ObjFunc;
 use compiler::scanner::lexer::Lexer;
 use compiler::syntax::ast::Ast;
 use compiler::syntax::parse::ParseStream;
 use lumi_core::source_code::SourceCode;
 use type_checker::TypeChecker;
-use virtual_machine::VirtualMachine;
+use virtual_machine::obj::ObjFunc;
+use virtual_machine::virtual_machine::VirtualMachine;
 
 #[derive(Parser, Debug)]
 #[command()]

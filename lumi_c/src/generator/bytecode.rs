@@ -6,6 +6,7 @@ pub enum Bytecode {
     BeginScope,
     EndScope,
     LoadConstant(usize), // Not the best solution
+    Lit,
     Add,
     Subtract,
     Multiply,

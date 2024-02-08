@@ -1,57 +1,48 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use super::chunk::Chunk;
+use compiler::generator::chunk::Chunk;
+use compiler::generator::constant::Constant;
 
 // TODO: We should add the Prim (primitive) variant.
 
 #[derive(Debug, Clone)]
 pub enum Obj {
-    Str(String),
-    Nil,
-    Bool(bool),
-    Float(f64),
-    Instance(*mut ObjInst),
-    Class(*mut ObjCls),
+    Constant(Constant),
+    Prim(*mut ObjPrim),
+    Inst(*mut ObjInst),
+    Class(*mut ObjClass),
     Func(*mut ObjFunc),
     NativeFunc(*mut ObjNativeFunc),
     BoundMethod(*mut ObjBoundMethod),
 }
 
 impl Obj {
-    pub fn as_bool(&self) -> bool {
-        if let Obj::Bool(value) = self {
-            *value
-        } else {
-            panic!();
-        }
-    }
-
-    pub fn as_float(&self) -> f64 {
-        if let Obj::Float(value) = self {
-            *value
-        } else {
-            panic!();
-        }
-    }
-
-    pub fn as_str(&self) -> String {
-        if let Obj::Str(value) = self {
+    pub fn as_const(&self) -> Constant {
+        if let Obj::Constant(value) = self {
             value.clone()
+        } else {
+            panic!("Not a constant");
+        }
+    }
+
+    pub fn as_prim(&self) -> *mut ObjPrim {
+        if let Obj::Prim(value) = self {
+            *value
         } else {
             panic!();
         }
     }
 
     pub fn as_instance(&self) -> *mut ObjInst {
-        if let Obj::Instance(value) = self {
+        if let Obj::Inst(value) = self {
             *value
         } else {
             panic!();
         }
     }
 
-    pub fn as_class(&self) -> *mut ObjCls {
+    pub fn as_class(&self) -> *mut ObjClass {
         if let Obj::Class(value) = self {
             *value
         } else {
@@ -74,12 +65,26 @@ impl Obj {
             panic!();
         }
     }
+
+    pub fn as_bound_method(&self) -> *mut ObjBoundMethod {
+        if let Obj::BoundMethod(value) = self {
+            *value
+        } else {
+            panic!();
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ObjBoundMethodFunc {
+    Default(*mut ObjFunc),
+    Native(*mut ObjNativeFunc),
 }
 
 #[derive(Debug)]
 pub struct ObjBoundMethod {
-    pub this: *mut ObjInst,
-    pub func: *mut ObjFunc,
+    pub this: Obj,
+    pub func: ObjBoundMethodFunc,
 }
 
 #[derive(Debug)]
@@ -105,7 +110,7 @@ pub struct ObjNativeFunc {
 }
 
 #[derive(Debug)]
-pub struct ObjCls {
+pub struct ObjClass {
     pub name: String,
     // TODO: Replace the fields_count for a hash set or a vec.
     pub fields_count: u32,
@@ -113,16 +118,16 @@ pub struct ObjCls {
 
 #[derive(Debug)]
 pub struct ObjInst {
-    class: *mut ObjCls,
+    class: *mut ObjClass,
     props: HashMap<String, Obj>,
 }
 
 impl ObjInst {
-    pub fn new(class: *mut ObjCls, props: HashMap<String, Obj>) -> Self {
+    pub fn new(class: *mut ObjClass, props: HashMap<String, Obj>) -> Self {
         Self { class, props }
     }
 
-    pub fn class_ptr(&self) -> *mut ObjCls {
+    pub fn class_ptr(&self) -> *mut ObjClass {
         *&self.class
     }
 
@@ -132,6 +137,50 @@ impl ObjInst {
 
     pub fn set_prop(&mut self, prop_name: &str, prop_value: Obj) {
         self.props.insert(prop_name.to_owned(), prop_value);
+    }
+}
+
+#[derive(Debug)]
+pub enum ObjPrimKind {
+    Nil,
+    Num,
+    Bool,
+}
+
+#[derive(Debug)]
+pub struct ObjPrim {
+    pub class: *mut ObjClass,
+    pub value: f64,
+    pub kind: ObjPrimKind,
+}
+
+impl ObjPrim {
+    pub fn num(class: *mut ObjClass, value: f64) -> Self {
+        Self {
+            class,
+            value,
+            kind: ObjPrimKind::Num,
+        }
+    }
+
+    pub fn class_ptr(&self) -> *mut ObjClass {
+        *&self.class
+    }
+
+    pub fn bool(class: *mut ObjClass, value: bool) -> Self {
+        Self {
+            class,
+            value: if value { 1.0 } else { 0.0 },
+            kind: ObjPrimKind::Bool,
+        }
+    }
+
+    pub fn nil(class: *mut ObjClass) -> Self {
+        Self {
+            class,
+            value: 0.0,
+            kind: ObjPrimKind::Nil,
+        }
     }
 }
 

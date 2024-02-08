@@ -1,4 +1,4 @@
-pub mod chunk;
-pub mod generator;
 pub mod bytecode;
-pub mod obj;
+pub mod chunk;
+pub mod constant;
+pub mod generator;
