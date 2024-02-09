@@ -52,13 +52,17 @@ impl Generate for Stmt {
     fn generate(&self, chunk: &mut Chunk) {
         match self {
             Stmt::Impl(im) => {
-                if !im.methods().is_empty() {
-                    for method in im.methods() {
+                if im.methods().is_empty() {
+                    return;
+                }
+
+                for method in im.methods() {
+                    if let StmtFun::Default { .. } = method {
                         method.generate(chunk);
                         chunk.load_constant(Constant::Str(im.ty().ident().name().clone()));
-                    }
 
-                    chunk.write_op(Bytecode::DeclareMethod);
+                        chunk.write_op(Bytecode::DeclareMethod);
+                    }
                 }
             }
             Stmt::Print(print) => {
@@ -81,12 +85,12 @@ impl Generate for Stmt {
             Stmt::Let(stmt) => {
                 stmt.expr().generate(chunk);
                 chunk.load_constant(Constant::Str(stmt.ident().name()));
-                chunk.write_op(Bytecode::SetVar);
+                chunk.write_op(Bytecode::DeclareVar);
             }
             Stmt::Const(stmt) => {
                 stmt.expr().generate(chunk);
                 chunk.load_constant(Constant::Str(stmt.ident().name()));
-                chunk.write_op(Bytecode::SetVar);
+                chunk.write_op(Bytecode::DeclareVar);
             }
             Stmt::Expr(expr) => {
                 expr.expr().generate(chunk);
@@ -97,6 +101,7 @@ impl Generate for Stmt {
                     expr.generate(chunk);
                 } else {
                     chunk.load_constant(Constant::Nil);
+                    chunk.write_op(Bytecode::Lit);
                 }
                 chunk.write_op(Bytecode::Return);
             }
@@ -128,7 +133,8 @@ impl Generate for Expr {
                 match assign.left.as_ref() {
                     Expr::Ident(ident) => {
                         chunk.load_constant(Constant::Str(ident.ident.name()));
-                        chunk.write_op(Bytecode::SetVar);
+                        chunk.write_op(Bytecode::DeclareVar);
+                        // REVIEW: Should we have a "SetVar" bytecode?
                     }
                     Expr::Get(get) => {
                         chunk.load_constant(Constant::Str(get.ident.name()));

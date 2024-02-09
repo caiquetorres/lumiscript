@@ -2,13 +2,11 @@ use std::collections::HashMap;
 use std::fmt::Display;
 
 use compiler::generator::chunk::Chunk;
-use compiler::generator::constant::Constant;
 
 // TODO: We should add the Prim (primitive) variant.
 
 #[derive(Debug, Clone)]
 pub enum Obj {
-    Constant(Constant),
     Prim(*mut ObjPrim),
     Inst(*mut ObjInst),
     Class(*mut ObjClass),
@@ -18,14 +16,6 @@ pub enum Obj {
 }
 
 impl Obj {
-    pub fn as_const(&self) -> Constant {
-        if let Obj::Constant(value) = self {
-            value.clone()
-        } else {
-            panic!("Not a constant");
-        }
-    }
-
     pub fn as_prim(&self) -> *mut ObjPrim {
         if let Obj::Prim(value) = self {
             *value
@@ -106,7 +96,16 @@ impl ObjFunc {
 
 pub struct ObjNativeFunc {
     pub name: String,
-    pub func: Box<dyn Fn(usize, Vec<Obj>) -> Obj>,
+    pub func: Box<dyn Fn(HashMap<String, Obj>) -> Obj>,
+}
+
+impl ObjNativeFunc {
+    pub fn new<F: Fn(HashMap<String, Obj>) -> Obj + 'static>(name: &str, func: F) -> Self {
+        Self {
+            name: name.to_owned(),
+            func: Box::new(func),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -114,6 +113,15 @@ pub struct ObjClass {
     pub name: String,
     // TODO: Replace the fields_count for a hash set or a vec.
     pub fields_count: u32,
+}
+
+impl ObjClass {
+    pub fn new(name: &str, fields_count: u32) -> Self {
+        Self {
+            name: name.to_owned(),
+            fields_count,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -187,5 +195,24 @@ impl ObjPrim {
 impl Display for Obj {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Debug)]
+pub struct ObjStack {
+    buffer: Vec<Obj>,
+}
+
+impl ObjStack {
+    pub(crate) fn new() -> Self {
+        Self { buffer: Vec::new() }
+    }
+
+    pub(crate) fn push(&mut self, obj: Obj) {
+        self.buffer.push(obj)
+    }
+
+    pub(crate) fn pop(&mut self) -> Obj {
+        self.buffer.pop().unwrap()
     }
 }

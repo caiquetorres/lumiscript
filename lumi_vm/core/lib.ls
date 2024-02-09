@@ -1,11 +1,3 @@
-trait Copy {
-    fun copy() -> This;
-}
-
-impl Copy for Num {
-    extern fun copy() -> This;
-}
-
 impl Copy for Bool {
     extern fun copy() -> This;
 }
@@ -33,9 +25,9 @@ trait Sub {
 }
 
 impl Add for Num {
-    extern fun add(other: Num) -> Num;
+    extern fun add(other: This) -> This;
 }
 
 impl Sub for Num {
-    extern fun sub(other: Num) -> Num;
+    extern fun sub(other: This) -> This;
 }

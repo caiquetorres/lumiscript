@@ -4,20 +4,20 @@ use super::constant::Constant;
 #[derive(Debug, Clone)]
 pub struct Chunk {
     buffer: Vec<Bytecode>,
-    objects: Vec<Constant>,
+    constants: Vec<Constant>,
 }
 
 impl Chunk {
     pub fn new() -> Self {
         Self {
             buffer: vec![],
-            objects: vec![],
+            constants: vec![],
         }
     }
 
     pub fn load_constant(&mut self, constant: Constant) {
-        self.objects.push(constant);
-        let pos = self.objects.len() - 1;
+        self.constants.push(constant);
+        let pos = self.constants.len() - 1;
         self.write_op(Bytecode::LoadConstant(pos));
     }
 
@@ -30,6 +30,6 @@ impl Chunk {
     }
 
     pub fn constant(&self, i: usize) -> Option<Constant> {
-        self.objects.get(i).cloned()
+        self.constants.get(i).cloned()
     }
 }

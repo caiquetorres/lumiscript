@@ -98,13 +98,13 @@ impl ScopeStack {
     /// An `Option` containing the retrieved `Object` if the identifier is
     /// found, or `None` if the identifier is not present in any of the
     /// scopes.
-    pub(crate) fn get(&self, ident: &str) -> Option<Obj> {
+    pub(crate) fn get(&self, ident: &str) -> Obj {
         for current in self.buffer.iter().rev() {
             if let Some(obj) = current.symbols.get(ident) {
-                return Some(obj.clone());
+                return obj.clone();
             }
         }
-        None
+        unreachable!()
     }
 
     fn current(&mut self) -> Option<&mut Scope> {

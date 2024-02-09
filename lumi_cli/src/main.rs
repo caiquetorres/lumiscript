@@ -7,8 +7,7 @@ use compiler::syntax::ast::Ast;
 use compiler::syntax::parse::ParseStream;
 use lumi_core::source_code::SourceCode;
 use type_checker::TypeChecker;
-use virtual_machine::obj::ObjFunc;
-use virtual_machine::virtual_machine::VirtualMachine;
+use virtual_machine::vm::Vm;
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -58,5 +57,6 @@ fn run(source_code: &str, should_type_check: bool) {
     }
 
     let chunk = Generator::generate(&ast);
-    VirtualMachine::run(ObjFunc::root(chunk));
+    let mut vm = Vm::new(chunk);
+    vm.run();
 }
