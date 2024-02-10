@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 compiler = { path = "../lumi_c" }
+lumi_core = { path = "../lumi_core" }
 
 [features]
-

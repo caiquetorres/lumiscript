@@ -6,13 +6,15 @@ use compiler::generator::chunk::Chunk;
 use compiler::generator::constant::Constant;
 
 use crate::call_frame::{CallFrame, CallFrameStack};
-use crate::const_stack::ConstStack;
 use crate::obj::{
     Obj, ObjBoundMethod, ObjBoundMethodFunc, ObjClass, ObjFunc, ObjInst, ObjNativeFunc, ObjPrim,
-    ObjPrimKind, ObjStack,
+    ObjPrimKind,
 };
 use crate::raw_ptr::RawPtr;
+use crate::runtime_error::RuntimeError;
 use crate::scope::ScopeStack;
+use crate::stacks::const_stack::ConstStack;
+use crate::stacks::obj_stack::ObjStack;
 
 struct ObjFactory;
 
@@ -46,9 +48,16 @@ impl Vm {
         }
     }
 
+    pub fn run2(&mut self) -> Result<(), RuntimeError> {
+        let root_fun = ObjFactory::create(ObjFunc::root(self.chunk.clone()));
+        let root_frame = CallFrame::new(root_fun, HashMap::new());
+
+        todo!()
+    }
+
     pub fn run(&mut self) {
-        let mut root_fun = Box::new(ObjFunc::root(self.chunk.clone()));
-        let root_frame = CallFrame::new(root_fun.as_mut_ptr(), HashMap::new());
+        let root_fun = ObjFactory::create(ObjFunc::root(self.chunk.clone()));
+        let root_frame = CallFrame::new(root_fun, HashMap::new());
 
         self.frame_stack.push(root_frame);
 
@@ -396,8 +405,6 @@ impl Vm {
                 self.frame_stack.next();
             }
         }
-
-        println!("{:#?}", self.scope_stack);
     }
 
     fn register_base_classes(&mut self) {

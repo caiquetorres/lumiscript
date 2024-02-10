@@ -1,7 +1,7 @@
 use compiler::generator::constant::Constant;
 
 #[derive(Debug)]
-pub struct ConstStack {
+pub(crate) struct ConstStack {
     buffer: Vec<Constant>,
 }
 

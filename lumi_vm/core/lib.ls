@@ -1,7 +1,3 @@
-impl Copy for Bool {
-    extern fun copy() -> This;
-}
-
 trait ToBool {
     fun toBool() -> bool;
 }
