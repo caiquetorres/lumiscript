@@ -32,6 +32,8 @@ pub enum Bytecode {
     Return,
     ImplTrait,
     DeclareTrait,
+    JumpIfFalse,
+    Jump,
 }
 
 impl Display for Bytecode {

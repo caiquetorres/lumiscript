@@ -16,11 +16,13 @@ use crate::operations::declare_func::DeclareFunc;
 use crate::operations::declare_method::DeclareMethod;
 use crate::operations::declare_trait::DeclareTrait;
 use crate::operations::end_scope::EndScope;
+use crate::operations::equals::Equals;
 use crate::operations::impl_trait::ImplTrait;
 use crate::operations::lit::Lit;
 use crate::operations::load_constant::LoadConstant;
+use crate::operations::not::Not;
 use crate::operations::pop::Pop;
-use crate::operations::substract::Subtract;
+use crate::operations::subtract::Subtract;
 use crate::raw_ptr::RawPtr;
 use crate::runtime_error::RuntimeError;
 use crate::scope::ScopeStack;
@@ -81,6 +83,27 @@ impl Vm {
 
         while let Some(inst) = self.frame_stack.current().and_then(|f| f.peek()) {
             match inst {
+                Bytecode::JumpIfFalse => {
+                    let offset = self.const_stack.pop()?.as_num() as usize;
+                    let prim = self.obj_stack.peek()?.as_prim()?;
+
+                    unsafe {
+                        let prim = &*prim;
+                        if let ObjPrimKind::Bool = prim.kind {
+                            if prim.value == 0.0 {
+                                for _ in 0..offset {
+                                    self.frame_stack.next();
+                                }
+                            }
+                        }
+                    }
+                }
+                Bytecode::Jump => {
+                    let offset = self.const_stack.pop()?.as_num() as usize;
+                    for _ in 0..offset {
+                        self.frame_stack.next();
+                    }
+                }
                 Bytecode::LoadConstant(i) => LoadConstant::exec(*i, self)?,
                 Bytecode::BeginScope => BeginScope::exec(self)?,
                 Bytecode::EndScope => EndScope::exec(self)?,
@@ -252,6 +275,8 @@ impl Vm {
                     // FIXME: All the functions need at least one return statement to work
                     self.frame_stack.pop();
                 }
+                Bytecode::Not => Not::exec(self)?,
+                Bytecode::Equal => Equals::exec(self)?,
                 Bytecode::Add => Add::exec(self)?,
                 Bytecode::Subtract => Subtract::exec(self)?,
                 Bytecode::Println => {
@@ -306,53 +331,79 @@ impl Vm {
     }
 
     fn register_base_functions(&mut self) -> Result<(), RuntimeError> {
+        let bool_cls_ptr = self.scope_stack.get("Bool")?.as_class()?;
+
+        self.define_method("Bool", "neg", move |params| {
+            let this = params
+                .get("this")
+                .ok_or(RuntimeError::new("Symbol 'this' not found in this scope"))?
+                .as_prim()?;
+
+            let result = unsafe {
+                let this = &*this;
+                ObjPrim::bool(bool_cls_ptr, !(this.value == 1.0))
+            };
+
+            Ok(Obj::Prim(ObjFactory::create(result)))
+        })?;
+
+        self.define_method("Num", "eq", move |params| {
+            let this = params
+                .get("this")
+                .ok_or(RuntimeError::new("Symbol 'this' not found in this scope"))?
+                .as_prim()?;
+
+            let other = params
+                .get("other")
+                .ok_or(RuntimeError::new("Symbol 'other' not found in this scope"))?
+                .as_prim()?;
+
+            let result = unsafe {
+                let this = &*this;
+                let other = &*other;
+                ObjPrim::bool(bool_cls_ptr, this.value == other.value)
+            };
+
+            Ok(Obj::Prim(ObjFactory::create(result)))
+        })?;
+
         let start_time = Instant::now();
         let num_class_ptr = self.scope_stack.get("Num")?.as_class()?;
 
-        let clock_native_func = ObjFactory::create(ObjNativeFunc::new(
-            "clock",
-            move |_| -> Result<Obj, RuntimeError> {
-                let end_time = Instant::now();
-                let elapsed_time = end_time - start_time;
+        self.define_func("clock", move |_| -> Result<Obj, RuntimeError> {
+            let end_time = Instant::now();
+            let elapsed_time = end_time - start_time;
 
-                let res = ObjFactory::create(ObjPrim::num(
-                    num_class_ptr,
-                    elapsed_time.as_millis() as f64,
-                ));
-                Ok(Obj::Prim(res))
-            },
-        ));
-
-        self.scope_stack
-            .insert("clock", Obj::NativeFunc(clock_native_func));
+            let res =
+                ObjFactory::create(ObjPrim::num(num_class_ptr, elapsed_time.as_millis() as f64));
+            Ok(Obj::Prim(res))
+        });
 
         Ok(())
     }
 
     fn register_base_methods(&mut self) -> Result<(), RuntimeError> {
-        self.define_method(
-            "Num",
-            "add",
-            move |cls_ptr, params| -> Result<Obj, RuntimeError> {
-                let this = params
-                    .get("this")
-                    .ok_or(RuntimeError::new("Symbol 'this' not found in this scope"))?
-                    .as_prim()?;
+        let num_cls_ptr = self.scope_stack.get("Num")?.as_class()?;
 
-                let other = params
-                    .get("other")
-                    .ok_or(RuntimeError::new("Symbol 'other' not found in this scope"))?
-                    .as_prim()?;
+        self.define_method("Num", "add", move |params| -> Result<Obj, RuntimeError> {
+            let this = params
+                .get("this")
+                .ok_or(RuntimeError::new("Symbol 'this' not found in this scope"))?
+                .as_prim()?;
 
-                let result = unsafe {
-                    let this = &*this;
-                    let other = &*other;
-                    ObjPrim::num(cls_ptr, this.value + other.value)
-                };
+            let other = params
+                .get("other")
+                .ok_or(RuntimeError::new("Symbol 'other' not found in this scope"))?
+                .as_prim()?;
 
-                Ok(Obj::Prim(ObjFactory::create(result)))
-            },
-        )?;
+            let result = unsafe {
+                let this = &*this;
+                let other = &*other;
+                ObjPrim::num(num_cls_ptr, this.value + other.value)
+            };
+
+            Ok(Obj::Prim(ObjFactory::create(result)))
+        })?;
 
         let num_class_ptr = self.scope_stack.get("Num")?.as_class()?;
 
@@ -431,24 +482,6 @@ impl Vm {
         Ok(())
     }
 
-    pub(crate) fn create_nil(&mut self, b: bool) -> Result<Obj, RuntimeError> {
-        let cls_ptr = self.scope_stack.get("Nil")?.as_class()?;
-        let res = ObjFactory::create(ObjPrim::nil(cls_ptr));
-        Ok(Obj::Prim(res))
-    }
-
-    pub(crate) fn create_bool(&mut self, b: bool) -> Result<Obj, RuntimeError> {
-        let cls_ptr = self.scope_stack.get("Bool")?.as_class()?;
-        let res = ObjFactory::create(ObjPrim::bool(cls_ptr, b));
-        Ok(Obj::Prim(res))
-    }
-
-    pub(crate) fn create_number(&mut self, n: f64) -> Result<Obj, RuntimeError> {
-        let cls_ptr = self.scope_stack.get("Num")?.as_class()?;
-        let res = ObjFactory::create(ObjPrim::num(cls_ptr, n));
-        Ok(Obj::Prim(res))
-    }
-
     pub(crate) fn define_func<F>(&mut self, func_name: &str, f: F)
     where
         F: Fn(HashMap<String, Obj>) -> Result<Obj, RuntimeError> + 'static,
@@ -465,10 +498,10 @@ impl Vm {
         f: F,
     ) -> Result<(), RuntimeError>
     where
-        F: Fn(*mut ObjClass, HashMap<String, Obj>) -> Result<Obj, RuntimeError> + 'static,
+        F: Fn(HashMap<String, Obj>) -> Result<Obj, RuntimeError> + 'static,
     {
         let cls_ptr = self.scope_stack.get(cls_name)?.as_class()?;
-        let native_func = ObjNativeFunc::new(method_name, move |params| f(cls_ptr, params));
+        let native_func = ObjNativeFunc::new(method_name, move |params| f(params));
         let native_func_ptr = ObjFactory::create(native_func);
         let obj = Obj::NativeFunc(native_func_ptr);
 

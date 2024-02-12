@@ -51,6 +51,44 @@ impl Generate for StmtFun {
 impl Generate for Stmt {
     fn generate(&self, chunk: &mut Chunk) {
         match self {
+            Stmt::If(r#if) => {
+                r#if.cond().generate(chunk);
+
+                let then_jump = chunk.load_constant(Constant::Num(f64::MAX));
+                chunk.write_op(Bytecode::JumpIfFalse);
+
+                let start = chunk.buffer().len() - 1;
+
+                chunk.write_op(Bytecode::Pop);
+                r#if.stmt().generate(chunk);
+
+                let else_jump = chunk.load_constant(Constant::Num(f64::MAX));
+                chunk.write_op(Bytecode::Jump);
+
+                let end = chunk.buffer().len() - 1;
+
+                let offset = end - start;
+
+                if let Some(constant) = chunk.constant_mut(then_jump) {
+                    *constant = Constant::Num(offset as f64);
+                }
+
+                let start = chunk.buffer().len() - 1;
+
+                chunk.write_op(Bytecode::Pop);
+
+                if let Some(r#else) = r#if.r#else() {
+                    r#else.stmt().generate(chunk);
+                }
+
+                let end = chunk.buffer().len() - 1;
+
+                let offset = end - start;
+
+                if let Some(constant) = chunk.constant_mut(else_jump) {
+                    *constant = Constant::Num(offset as f64);
+                }
+            }
             Stmt::Trait(tr) => {
                 chunk.load_constant(Constant::Str(tr.ident().name().clone()));
                 chunk.write_op(Bytecode::DeclareTrait);
@@ -174,8 +212,12 @@ impl Generate for Expr {
                 unary.expr.generate(chunk);
                 match &unary.operator.name() as &str {
                     "+" => { /* do nothing */ }
-                    "-" => chunk.write_op(Bytecode::Negate),
-                    "!" => chunk.write_op(Bytecode::Not),
+                    "-" => {
+                        chunk.write_op(Bytecode::Negate);
+                    }
+                    "!" => {
+                        chunk.write_op(Bytecode::Not);
+                    }
                     _ => unreachable!(),
                 }
             }
@@ -193,21 +235,35 @@ impl Generate for Expr {
                 bin.right.generate(chunk);
 
                 match &bin.operator.name() as &str {
-                    "+" => chunk.write_op(Bytecode::Add),
-                    "-" => chunk.write_op(Bytecode::Subtract),
-                    "*" => chunk.write_op(Bytecode::Multiply),
-                    "/" => chunk.write_op(Bytecode::Divide),
-                    "==" => chunk.write_op(Bytecode::Equal),
+                    "+" => {
+                        chunk.write_op(Bytecode::Add);
+                    }
+                    "-" => {
+                        chunk.write_op(Bytecode::Subtract);
+                    }
+                    "*" => {
+                        chunk.write_op(Bytecode::Multiply);
+                    }
+                    "/" => {
+                        chunk.write_op(Bytecode::Divide);
+                    }
+                    "==" => {
+                        chunk.write_op(Bytecode::Equal);
+                    }
                     "!=" => {
                         chunk.write_op(Bytecode::Equal);
                         chunk.write_op(Bytecode::Not);
                     }
-                    ">" => chunk.write_op(Bytecode::Greater),
+                    ">" => {
+                        chunk.write_op(Bytecode::Greater);
+                    }
                     ">=" => {
                         chunk.write_op(Bytecode::Less);
                         chunk.write_op(Bytecode::Not);
                     }
-                    "<" => chunk.write_op(Bytecode::Less),
+                    "<" => {
+                        chunk.write_op(Bytecode::Less);
+                    }
                     "<=" => {
                         chunk.write_op(Bytecode::Greater);
                         chunk.write_op(Bytecode::Not);

@@ -15,6 +15,12 @@ pub struct StmtElse {
     stmt: Box<Stmt>,
 }
 
+impl StmtElse {
+    pub fn stmt(&self) -> &Stmt {
+        self.stmt.as_ref()
+    }
+}
+
 impl Parse for StmtElse {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(Self {
@@ -45,6 +51,20 @@ pub struct StmtIf {
     cond: Expr,
     stmt: Box<Stmt>,
     r#else: Option<StmtElse>,
+}
+
+impl StmtIf {
+    pub fn cond(&self) -> &Expr {
+        &self.cond
+    }
+
+    pub fn stmt(&self) -> &Stmt {
+        &self.stmt.as_ref()
+    }
+
+    pub fn r#else(&self) -> Option<&StmtElse> {
+        self.r#else.as_ref()
+    }
 }
 
 impl Parse for StmtIf {
