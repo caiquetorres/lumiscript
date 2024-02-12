@@ -51,7 +51,17 @@ impl Generate for StmtFun {
 impl Generate for Stmt {
     fn generate(&self, chunk: &mut Chunk) {
         match self {
+            Stmt::Trait(tr) => {
+                chunk.load_constant(Constant::Str(tr.ident().name().clone()));
+                chunk.write_op(Bytecode::DeclareTrait);
+            }
             Stmt::Impl(im) => {
+                if let Some(tr) = im.tr() {
+                    chunk.load_constant(Constant::Str(im.ty().ident().name().clone()));
+                    chunk.load_constant(Constant::Str(tr.ident().name().clone()));
+                    chunk.write_op(Bytecode::ImplTrait);
+                }
+
                 if im.methods().is_empty() {
                     return;
                 }

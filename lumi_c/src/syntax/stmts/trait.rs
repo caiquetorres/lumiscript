@@ -17,6 +17,12 @@ pub struct StmtTrait {
     _right_brace: RightBrace,
 }
 
+impl StmtTrait {
+    pub fn ident(&self) -> &Ident {
+        &self.ident
+    }
+}
+
 impl Parse for StmtTrait {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtTrait {

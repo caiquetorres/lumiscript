@@ -58,5 +58,8 @@ fn run(source_code: &str, should_type_check: bool) {
 
     let chunk = Generator::generate(&ast);
     let mut vm = Vm::new(chunk);
-    vm.run();
+
+    if let Err(runtime_error) = vm.run() {
+        println!("{:?}", runtime_error);
+    }
 }

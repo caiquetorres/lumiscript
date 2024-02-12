@@ -29,7 +29,7 @@ impl Chunk {
         self.buffer.push(bytecode);
     }
 
-    pub fn constant(&self, i: usize) -> Option<Constant> {
-        self.constants.get(i).cloned()
+    pub fn constant(&self, i: usize) -> Option<&Constant> {
+        self.constants.get(i)
     }
 }

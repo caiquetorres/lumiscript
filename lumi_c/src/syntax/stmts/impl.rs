@@ -32,6 +32,12 @@ pub struct Trait {
     _for: For,
 }
 
+impl Trait {
+    pub fn ident(&self) -> &Ident {
+        &self.ident
+    }
+}
+
 impl Parse for Trait {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(Trait {
@@ -62,7 +68,7 @@ impl Parse for Option<Trait> {
 
 pub struct StmtImpl {
     _impl: Impl,
-    r#tr: Option<Trait>,
+    tr: Option<Trait>,
     ty: Type,
     _left_brace: LeftBrace,
     methods: Vec<StmtFun>,
@@ -70,6 +76,10 @@ pub struct StmtImpl {
 }
 
 impl StmtImpl {
+    pub fn tr(&self) -> Option<&Trait> {
+        self.tr.as_ref()
+    }
+
     pub fn ty(&self) -> &Type {
         &self.ty
     }
@@ -83,7 +93,7 @@ impl Parse for StmtImpl {
     fn parse(input: &mut ParseStream) -> Result<Self, String> {
         Ok(StmtImpl {
             _impl: input.parse()?,
-            r#tr: input.parse()?,
+            tr: input.parse()?,
             ty: input.parse()?,
             _left_brace: input.parse()?,
             methods: input.parse()?,

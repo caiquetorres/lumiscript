@@ -34,15 +34,11 @@ impl CallFrame {
     /// # Returns
     /// An `Option` containing the next `Bytecode` instruction if
     /// available, or `None` if the end of the chunk is reached.
-    pub(crate) fn peek(&self) -> Option<Bytecode> {
-        self.function()
-            .chunk
-            .buffer()
-            .get(self.ip)
-            .map(|bytecode| *bytecode)
+    pub(crate) fn peek(&self) -> Option<&Bytecode> {
+        self.function().chunk.buffer().get(self.ip)
     }
 
-    pub(crate) fn constant(&self, pos: usize) -> Option<Constant> {
+    pub(crate) fn constant(&self, pos: usize) -> Option<&Constant> {
         self.function().chunk.constant(pos)
     }
 

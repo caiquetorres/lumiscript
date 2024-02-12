@@ -30,6 +30,8 @@ pub enum Bytecode {
     Call,
     Println,
     Return,
+    ImplTrait,
+    DeclareTrait,
 }
 
 impl Display for Bytecode {

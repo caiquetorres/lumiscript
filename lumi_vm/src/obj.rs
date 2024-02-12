@@ -3,6 +3,8 @@ use std::fmt::Display;
 
 use compiler::generator::chunk::Chunk;
 
+use crate::runtime_error::RuntimeError;
+
 // TODO: We should add the Prim (primitive) variant.
 
 #[derive(Debug, Clone)]
@@ -10,17 +12,28 @@ pub enum Obj {
     Prim(*mut ObjPrim),
     Inst(*mut ObjInst),
     Class(*mut ObjClass),
+    Trait(*mut ObjTrait),
     Func(*mut ObjFunc),
     NativeFunc(*mut ObjNativeFunc),
     BoundMethod(*mut ObjBoundMethod),
 }
 
 impl Obj {
-    pub fn as_prim(&self) -> *mut ObjPrim {
+    pub fn class_ptr(&self) -> Option<*mut ObjClass> {
+        unsafe {
+            match self {
+                Self::Prim(prim) => Some((&*(*prim)).class_ptr()),
+                Self::Inst(inst) => Some((&*(*inst)).class_ptr()),
+                _ => None,
+            }
+        }
+    }
+
+    pub fn as_prim(&self) -> Result<*mut ObjPrim, RuntimeError> {
         if let Obj::Prim(value) = self {
-            *value
+            Ok(*value)
         } else {
-            panic!();
+            Err(RuntimeError::new("Object cannot be coerced to a primitive"))
         }
     }
 
@@ -32,11 +45,23 @@ impl Obj {
         }
     }
 
-    pub fn as_class(&self) -> *mut ObjClass {
-        if let Obj::Class(value) = self {
-            *value
+    pub fn as_trait(&self) -> Result<*mut ObjTrait, RuntimeError> {
+        if let Obj::Trait(value) = self {
+            Ok(*value)
         } else {
-            panic!();
+            Err(RuntimeError::new(
+                "Object cannot be coerced to a trait pointer",
+            ))
+        }
+    }
+
+    pub fn as_class(&self) -> Result<*mut ObjClass, RuntimeError> {
+        if let Obj::Class(value) = self {
+            Ok(*value)
+        } else {
+            Err(RuntimeError::new(
+                "Object cannot be coerced to a class pointer",
+            ))
         }
     }
 
@@ -96,14 +121,29 @@ impl ObjFunc {
 
 pub struct ObjNativeFunc {
     pub name: String,
-    pub func: Box<dyn Fn(HashMap<String, Obj>) -> Obj>,
+    pub func: Box<dyn Fn(HashMap<String, Obj>) -> Result<Obj, RuntimeError>>,
 }
 
 impl ObjNativeFunc {
-    pub fn new<F: Fn(HashMap<String, Obj>) -> Obj + 'static>(name: &str, func: F) -> Self {
+    pub fn new<F: Fn(HashMap<String, Obj>) -> Result<Obj, RuntimeError> + 'static>(
+        name: &str,
+        func: F,
+    ) -> Self {
         Self {
             name: name.to_owned(),
             func: Box::new(func),
+        }
+    }
+}
+
+pub struct ObjTrait {
+    pub name: String,
+}
+
+impl ObjTrait {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
         }
     }
 }
@@ -197,4 +237,3 @@ impl Display for Obj {
         write!(f, "{:?}", self)
     }
 }
-
