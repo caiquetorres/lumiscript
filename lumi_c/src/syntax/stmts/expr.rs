@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::exprs::expr::Expr;
 use crate::syntax::parse::Parse;
@@ -16,7 +17,7 @@ impl StmtExpr {
 }
 
 impl Parse for StmtExpr {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Self {
             expr: input.parse()?,
             _semicolon: input.parse()?,

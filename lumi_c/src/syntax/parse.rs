@@ -1,18 +1,18 @@
-use lumi_core::error_reporter::ErrorReporter;
 use lumi_core::source_code::SourceCode;
 
+use crate::compile_error::CompileError;
 use crate::scanner::token::Token;
 use crate::scanner::token::TokenKind;
 
 pub trait Parse: Sized {
-    fn parse(input: &mut ParseStream) -> Result<Self, String>;
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError>;
 }
 
 pub struct ParseStream {
     prev: usize,
     cur: usize,
     tokens: Vec<Token>,
-    error_reporter: ErrorReporter,
+    source_code: SourceCode,
 }
 
 impl ParseStream {
@@ -21,15 +21,15 @@ impl ParseStream {
             prev: 0,
             cur: 0,
             tokens,
-            error_reporter: ErrorReporter::new(source_code),
+            source_code,
         }
     }
 
-    pub fn error_reporter(&mut self) -> &mut ErrorReporter {
-        &mut self.error_reporter
+    pub fn source_code(&self) -> SourceCode {
+        self.source_code.clone()
     }
 
-    pub fn expect(&mut self, kind: TokenKind) -> Result<Token, String> {
+    pub fn expect(&mut self, kind: TokenKind) -> Result<Token, CompileError> {
         let token = self.cur();
         let prev_token = self.prev();
 
@@ -39,9 +39,11 @@ impl ParseStream {
         if token.kind == kind {
             Ok(token)
         } else {
-            let message = format!("Expected '{:?}'", kind);
-            self.error_reporter.report(&message, prev_token.span.end);
-            Err(message)
+            Err(CompileError::new(
+                &format!("Expected '{:?}'", kind),
+                prev_token.span.end,
+                self.source_code.clone(),
+            ))
         }
     }
 
@@ -70,7 +72,7 @@ impl ParseStream {
         self.tokens[self.cur + 1].kind
     }
 
-    pub fn parse<T: Parse>(&mut self) -> Result<T, String> {
+    pub fn parse<T: Parse>(&mut self) -> Result<T, CompileError> {
         T::parse(self)
     }
 }

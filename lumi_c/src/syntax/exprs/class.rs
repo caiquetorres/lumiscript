@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
@@ -23,7 +24,7 @@ impl Init {
 }
 
 impl Parse for Init {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Init {
             _colon: input.parse()?,
             expr: input.parse()?,
@@ -32,7 +33,7 @@ impl Parse for Init {
 }
 
 impl Parse for Option<Init> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == token!(:) {
             Ok(Some(Init {
                 _colon: input.parse()?,
@@ -60,7 +61,7 @@ impl FieldInit {
 }
 
 impl Parse for FieldInit {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(FieldInit {
             ident: input.parse()?,
             init: input.parse()?,
@@ -80,7 +81,7 @@ impl DisplayTree for FieldInit {
 }
 
 impl Parse for Vec<FieldInit> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == token!('}') {
             Ok(vec![])
         } else {

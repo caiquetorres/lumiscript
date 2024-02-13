@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
@@ -17,7 +18,7 @@ impl UnaryOp {
 }
 
 impl Parse for UnaryOp {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(UnaryOp {
             span: Span::from_token(input.next()),
         })
@@ -36,7 +37,7 @@ pub struct ExprUnary {
 }
 
 impl Parse for ExprUnary {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(ExprUnary {
             operator: input.parse()?,
             expr: input.parse()?,

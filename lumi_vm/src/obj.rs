@@ -136,6 +136,7 @@ impl ObjNativeFunc {
     }
 }
 
+#[derive(Debug)]
 pub struct ObjTrait {
     pub name: String,
 }

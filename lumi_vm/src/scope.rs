@@ -94,7 +94,10 @@ impl ScopeStack {
                 return Ok(obj.clone());
             }
         }
-        Err(RuntimeError::new("Identifier not found"))
+        Err(RuntimeError::new(&format!(
+            "Identifier '{}' not found",
+            ident
+        )))
     }
 
     pub fn set_method(&mut self, cls: *mut ObjClass, ident: &str, method: Obj) {

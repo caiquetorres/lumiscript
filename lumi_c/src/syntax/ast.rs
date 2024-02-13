@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::token;
 
@@ -14,10 +15,14 @@ impl Ast {
     pub fn stmts(&self) -> &Vec<Stmt> {
         &self.stmts
     }
+
+    pub fn merge(&mut self, ast: Self) {
+        self.stmts.extend(ast.stmts)
+    }
 }
 
 impl Parse for Ast {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut stmts = vec![];
 
         while input.peek() != token!(eof) {

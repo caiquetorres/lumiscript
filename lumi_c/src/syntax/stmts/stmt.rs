@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
@@ -39,19 +40,19 @@ pub enum Stmt {
 }
 
 impl Parse for Stmt {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         ambiguous_stmt(input)
     }
 }
 
 impl Parse for Box<Stmt> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         ambiguous_stmt(input).map(Box::new)
     }
 }
 
 impl Parse for Vec<Stmt> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut stmts = vec![];
 
         while input.peek() != token!('}') && input.peek() != token!(eof) {
@@ -63,7 +64,7 @@ impl Parse for Vec<Stmt> {
 }
 
 impl Parse for Vec<Box<Stmt>> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut stmts = vec![];
 
         while input.peek() != token!('}') && input.peek() != token!(eof) {
@@ -112,7 +113,7 @@ impl DisplayTree for Stmt {
     }
 }
 
-fn ambiguous_stmt(input: &mut ParseStream) -> Result<Stmt, String> {
+fn ambiguous_stmt(input: &mut ParseStream) -> Result<Stmt, CompileError> {
     match input.peek() {
         token!('{') => Ok(Stmt::Block(input.parse()?)),
         token!(let) => Ok(Stmt::Let(input.parse()?)),

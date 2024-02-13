@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::ident;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
@@ -17,7 +18,7 @@ impl Ident {
 }
 
 impl Parse for Ident {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Ident {
             span: Span::from_token(input.expect(ident!())?),
         })

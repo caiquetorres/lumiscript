@@ -1,7 +1,7 @@
-use lumi_core::error_reporter::ErrorReporter;
 use lumi_core::line_column::LineColumn;
 use lumi_core::source_code::SourceCode;
 
+use crate::compile_error::CompileError;
 use crate::ident;
 use crate::number;
 use crate::string;
@@ -11,16 +11,26 @@ use super::token::Token;
 use super::token::TokenKind;
 
 /// Represents a lexer responsible for tokenizing the source code.
-pub struct Lexer {
+pub struct TokenStream {
     cur: usize,
     line_column: LineColumn,
     source_code: SourceCode,
-    error_reporter: ErrorReporter,
+    errors: Vec<CompileError>,
 }
 
-impl Lexer {
-    pub fn lex(&mut self) -> Vec<Token> {
-        Vec::from_iter(self)
+impl TokenStream {
+    pub fn tokens(&mut self) -> Result<Vec<Token>, Vec<CompileError>> {
+        let mut tokens = vec![];
+
+        while let Some(token) = self.next() {
+            tokens.push(token);
+        }
+
+        if self.errors.is_empty() {
+            Ok(tokens)
+        } else {
+            Err(self.errors.clone())
+        }
     }
 
     pub fn new(source_code: SourceCode) -> Self {
@@ -28,12 +38,8 @@ impl Lexer {
             cur: 0,
             source_code: source_code.clone(),
             line_column: LineColumn::default(),
-            error_reporter: ErrorReporter::new(source_code),
+            errors: vec![],
         }
-    }
-
-    pub fn error_reporter(&self) -> &ErrorReporter {
-        &self.error_reporter
     }
 
     fn consume(&mut self) {
@@ -119,7 +125,7 @@ impl Lexer {
     }
 }
 
-impl Iterator for Lexer {
+impl Iterator for TokenStream {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -444,8 +450,11 @@ impl Iterator for Lexer {
 
                         let token_value = &self.source_code.code()[self.cur - 1..self.cur];
 
-                        self.error_reporter
-                            .report(&format!("Unexpected token \"{}\"", token_value), start);
+                        self.errors.push(CompileError::new(
+                            &format!("Unexpected token \"{}\"", token_value),
+                            start,
+                            self.source_code.clone(),
+                        ));
 
                         Some(Token::new(
                             token!(bad),

@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::token;
@@ -23,7 +24,7 @@ impl Type {
 }
 
 impl Parse for Type {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Type {
             ident: input.parse()?,
             nullable: {

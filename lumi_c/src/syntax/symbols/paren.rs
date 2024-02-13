@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
@@ -9,7 +10,7 @@ pub struct LeftParen {
 }
 
 impl Parse for LeftParen {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(LeftParen {
             _span: Span::from_token(input.expect(token!('('))?),
         })
@@ -21,7 +22,7 @@ pub struct RightParen {
 }
 
 impl Parse for RightParen {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(RightParen {
             _span: Span::from_token(input.expect(token!(')'))?),
         })

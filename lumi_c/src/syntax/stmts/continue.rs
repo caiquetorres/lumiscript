@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::{Parse, ParseStream};
@@ -10,7 +11,7 @@ pub struct StmtContinue {
 }
 
 impl Parse for StmtContinue {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(StmtContinue {
             _return: input.parse()?,
             _semicolon: input.parse()?,

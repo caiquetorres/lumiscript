@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::ident;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
@@ -10,7 +11,6 @@ use crate::syntax::symbols::brace::RightBrace;
 use crate::syntax::symbols::ident::Ident;
 use crate::syntax::symbols::r#for::For;
 use crate::token;
-
 use crate::scanner::token::TokenKind;
 
 use super::fun::StmtFun;
@@ -20,7 +20,7 @@ pub struct Impl {
 }
 
 impl Parse for Impl {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Impl {
             _span: Span::from_token(input.expect(token!(impl))?),
         })
@@ -39,7 +39,7 @@ impl Trait {
 }
 
 impl Parse for Trait {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Trait {
             ident: input.parse()?,
             _for: input.parse()?,
@@ -54,7 +54,7 @@ impl DisplayTree for Trait {
 }
 
 impl Parse for Option<Trait> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == ident!() && input.peek2() == token!(for) {
             Ok(Some(Trait {
                 ident: input.parse()?,
@@ -90,7 +90,7 @@ impl StmtImpl {
 }
 
 impl Parse for StmtImpl {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(StmtImpl {
             _impl: input.parse()?,
             tr: input.parse()?,

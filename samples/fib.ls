@@ -1,22 +1,32 @@
+trait Add {
+    fun add(other: This) -> This;
+}
+
+trait Sub {
+    fun sub(other: This) -> This;
+}
+
+impl Add for Num {
+    extern fun add(other: This) -> This;
+}
+
+impl Sub for Num {
+    extern fun sub(other: This) -> This;
+}
+
 fun main() {
     let res = fib(9);
     println res;
 }
 
 fun fib(n: Num) -> Num {
-    let a = 0;
-    let b = 1;
-    let c = 0;
-
     if n == 0 {
-        return a;
+        return 0;
     }
 
-    for i in 2..=n {
-        c = a + b;
-        a = b;
-        b = c;
+    if n == 1 {
+        return 1;
     }
 
-    return b;
+    return fib(n - 1) + fib(n - 2);
 }

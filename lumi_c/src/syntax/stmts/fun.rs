@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
@@ -23,7 +24,7 @@ pub struct ParamType {
 }
 
 impl Parse for ParamType {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(ParamType {
             _colon: input.parse()?,
             ty: input.parse()?,
@@ -32,7 +33,7 @@ impl Parse for ParamType {
 }
 
 impl Parse for Option<ParamType> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == token!(:) {
             Ok(Some(ParamType {
                 _colon: input.parse()?,
@@ -60,7 +61,7 @@ impl Param {
 }
 
 impl Parse for Param {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Param {
             ident: input.parse()?,
             ty: input.parse()?,
@@ -69,7 +70,7 @@ impl Parse for Param {
 }
 
 impl Parse for Vec<Param> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut params = vec![];
 
         if input.peek() == token!(')') {
@@ -112,7 +113,7 @@ pub struct ReturnType {
 }
 
 impl Parse for ReturnType {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(ReturnType {
             _arrow: input.parse()?,
             ty: input.parse()?,
@@ -121,7 +122,7 @@ impl Parse for ReturnType {
 }
 
 impl Parse for Option<ReturnType> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == token!(->) {
             Ok(Some(ReturnType {
                 _arrow: input.parse()?,
@@ -158,7 +159,7 @@ pub enum StmtFun {
 }
 
 impl Parse for StmtFun {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let _extern: Option<Extern> = input.parse()?;
         let r#static = input.parse()?;
         let _fun = input.parse()?;
@@ -210,7 +211,7 @@ impl Parse for StmtFun {
 }
 
 impl Parse for Vec<StmtFun> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut functions = vec![];
 
         while input.peek() != token!('}') {

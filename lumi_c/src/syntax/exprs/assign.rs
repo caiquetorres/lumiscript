@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
@@ -17,7 +18,7 @@ impl AssignOp {
 }
 
 impl Parse for AssignOp {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(AssignOp {
             span: Span::from_token(input.next()),
         })

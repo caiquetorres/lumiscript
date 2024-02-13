@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
@@ -15,7 +16,7 @@ pub struct ExprCall {
 }
 
 impl Parse for ExprCall {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Self {
             callee: input.parse()?,
             left_paren: input.parse()?,

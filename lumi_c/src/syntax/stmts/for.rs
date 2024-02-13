@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::{branch, DisplayTree};
 use crate::syntax::exprs::expr::Expr;
 use crate::syntax::parse::{Parse, ParseStream};
@@ -16,7 +17,7 @@ pub struct StmtFor {
 }
 
 impl Parse for StmtFor {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Self {
             _for: input.parse()?,
             ident: input.parse()?,

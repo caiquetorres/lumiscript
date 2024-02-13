@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
@@ -18,7 +19,7 @@ pub struct LetType {
 }
 
 impl Parse for LetType {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(LetType {
             _colon: input.parse()?,
             ty: input.parse()?,
@@ -27,7 +28,7 @@ impl Parse for LetType {
 }
 
 impl Parse for Option<LetType> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == token!(:) {
             Ok(Some(LetType {
                 _colon: input.parse()?,
@@ -59,7 +60,7 @@ impl StmtLet {
 }
 
 impl Parse for StmtLet {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(StmtLet {
             _let: input.parse()?,
             ident: input.parse()?,

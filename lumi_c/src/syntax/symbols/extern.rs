@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
@@ -15,7 +16,7 @@ impl Extern {
 }
 
 impl Parse for Extern {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Extern {
             span: Span::from_token(input.expect(token!(extern))?),
         })
@@ -23,7 +24,7 @@ impl Parse for Extern {
 }
 
 impl Parse for Option<Extern> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == token!(extern) {
             Ok(Some(input.parse()?))
         } else {

@@ -1,2 +1,2 @@
-pub mod lexer;
+pub mod token_stream;
 pub mod token;

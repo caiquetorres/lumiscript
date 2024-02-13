@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::exprs::expr::Expr;
@@ -18,7 +19,7 @@ impl StmtPrint {
 }
 
 impl Parse for StmtPrint {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(StmtPrint {
             _println: input.parse()?,
             expr: input.parse()?,

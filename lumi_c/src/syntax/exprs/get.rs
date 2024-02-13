@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
@@ -14,7 +15,7 @@ pub struct ExprGet {
 }
 
 impl Parse for ExprGet {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Self {
             expr: input.parse()?,
             dot: input.parse()?,

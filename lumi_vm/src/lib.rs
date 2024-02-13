@@ -1,4 +1,5 @@
 pub mod call_frame;
+pub mod native_functions;
 pub mod obj;
 pub mod operations;
 pub mod raw_ptr;
@@ -6,4 +7,3 @@ pub mod runtime_error;
 pub mod scope;
 pub mod stacks;
 pub mod vm;
-pub mod native_functions;

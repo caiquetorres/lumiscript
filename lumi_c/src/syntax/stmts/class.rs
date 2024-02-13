@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
@@ -18,7 +19,7 @@ pub struct Field {
 }
 
 impl Parse for Field {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Field {
             ident: input.parse()?,
             _colon: input.parse()?,
@@ -36,7 +37,7 @@ impl DisplayTree for Field {
 }
 
 impl Parse for Vec<Field> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == token!('}') {
             Ok(vec![])
         } else {
@@ -81,7 +82,7 @@ impl StmtClass {
 }
 
 impl Parse for StmtClass {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(StmtClass {
             _class: input.parse()?,
             ident: input.parse()?,

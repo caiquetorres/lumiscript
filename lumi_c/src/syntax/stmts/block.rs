@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
@@ -20,7 +21,7 @@ impl StmtBlock {
 }
 
 impl Parse for StmtBlock {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(StmtBlock {
             _left_brace: input.parse()?,
             stmts: input.parse()?,

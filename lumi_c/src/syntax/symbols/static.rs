@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
@@ -15,7 +16,7 @@ impl Static {
 }
 
 impl Parse for Static {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Static {
             span: Span::from_token(input.expect(token!(static))?),
         })
@@ -23,7 +24,7 @@ impl Parse for Static {
 }
 
 impl Parse for Option<Static> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == token!(static) {
             Ok(Some(input.parse()?))
         } else {

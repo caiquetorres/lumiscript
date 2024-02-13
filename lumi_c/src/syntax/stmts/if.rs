@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
@@ -22,7 +23,7 @@ impl StmtElse {
 }
 
 impl Parse for StmtElse {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Self {
             _else: input.parse()?,
             stmt: input.parse()?,
@@ -31,7 +32,7 @@ impl Parse for StmtElse {
 }
 
 impl Parse for Option<StmtElse> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Some(StmtElse {
             _else: input.parse()?,
             stmt: input.parse()?,
@@ -68,7 +69,7 @@ impl StmtIf {
 }
 
 impl Parse for StmtIf {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Self {
             _if: input.parse()?,
             cond: Expr::parse_without_eager_brace(input)?,

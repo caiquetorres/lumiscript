@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
@@ -18,7 +19,7 @@ impl BinOp {
 }
 
 impl Parse for BinOp {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(BinOp {
             span: Span::from_token(input.next()),
         })
@@ -38,7 +39,7 @@ pub struct ExprBinary {
 }
 
 impl Parse for ExprBinary {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(ExprBinary {
             left: input.parse()?,
             operator: input.parse()?,

@@ -1,6 +1,6 @@
+use crate::compile_error::CompileError;
 use crate::ident;
 use crate::number;
-
 use crate::scanner::token::token;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::DisplayTree;
@@ -33,25 +33,25 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn parse_without_eager_brace(input: &mut ParseStream) -> Result<Self, String> {
+    pub fn parse_without_eager_brace(input: &mut ParseStream) -> Result<Self, CompileError> {
         ambiguous_expr(input, false)
     }
 }
 
 impl Parse for Expr {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         ambiguous_expr(input, true)
     }
 }
 
 impl Parse for Box<Expr> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         ambiguous_expr(input, true).map(Box::new)
     }
 }
 
 impl Parse for Vec<Expr> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut exprs = vec![];
 
         if input.peek() == token!(')') {
@@ -93,11 +93,11 @@ impl DisplayTree for Vec<Expr> {
     }
 }
 
-fn ambiguous_expr(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+fn ambiguous_expr(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     assignment(input, allow_struct)
 }
 
-fn assignment(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+fn assignment(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut expr = equality(input, allow_struct)?;
 
     if input.peek() == token!(=) {
@@ -114,7 +114,7 @@ fn assignment(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, Strin
     Ok(expr)
 }
 
-fn equality(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+fn equality(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left = comparison(input, allow_struct)?;
 
     while input.peek() == token!(!=) || input.peek() == token!(==) {
@@ -131,7 +131,7 @@ fn equality(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String>
     Ok(left)
 }
 
-fn comparison(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+fn comparison(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left: Expr = range(input, allow_struct)?;
 
     while input.peek() == token!(>)
@@ -152,7 +152,7 @@ fn comparison(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, Strin
     Ok(left)
 }
 
-fn range(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+fn range(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left: Expr = term(input, allow_struct)?;
 
     while input.peek() == token!(..) || input.peek() == token!(..=) {
@@ -169,7 +169,7 @@ fn range(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
     Ok(left)
 }
 
-fn term(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+fn term(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left = factor(input, allow_struct)?;
 
     while input.peek() == token!(+) || input.peek() == token!(-) {
@@ -186,7 +186,7 @@ fn term(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
     Ok(left)
 }
 
-fn factor(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+fn factor(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left = unary(input, allow_struct)?;
 
     while input.peek() == token!(*) || input.peek() == token!(/) {
@@ -203,7 +203,7 @@ fn factor(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
     Ok(left)
 }
 
-fn unary(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+fn unary(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     if input.peek() == token!(+) || input.peek() == token!(-) || input.peek() == token!(!) {
         Ok(Expr::Unary(ExprUnary {
             operator: input.parse()?,
@@ -214,7 +214,7 @@ fn unary(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
     }
 }
 
-fn call(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
+fn call(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut expr = primary(input)?;
 
     if input.peek() == token!('{') && allow_struct {
@@ -246,7 +246,7 @@ fn call(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, String> {
     }
 }
 
-fn primary(input: &mut ParseStream) -> Result<Expr, String> {
+fn primary(input: &mut ParseStream) -> Result<Expr, CompileError> {
     match input.peek() {
         ident!() => Ok(Expr::Ident(input.parse()?)),
         token!(nil) => Ok(Expr::Lit(ExprLit::Nil {
@@ -265,10 +265,10 @@ fn primary(input: &mut ParseStream) -> Result<Expr, String> {
             input.parse::<RightParen>()?;
             Ok(expr)
         }
-        _ => {
-            let start = input.cur().span.start;
-            input.error_reporter().report("Expression expected", start);
-            Err("Expression expected".to_owned())
-        }
+        _ => Err(CompileError::new(
+            "Expression expected",
+            input.cur().span.start,
+            input.source_code(),
+        )),
     }
 }

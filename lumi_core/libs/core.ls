@@ -1,3 +1,11 @@
+trait Eq {
+    fun eq(other: This) -> bool;
+}
+
+impl Eq for Num {
+    extern fun eq(other: This) -> bool;
+}
+
 trait ToBool {
     fun toBool() -> bool;
 }

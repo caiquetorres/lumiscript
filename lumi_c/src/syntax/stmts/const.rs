@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
@@ -18,7 +19,7 @@ pub struct ConstType {
 }
 
 impl Parse for ConstType {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(ConstType {
             _colon: input.parse()?,
             ty: input.parse()?,
@@ -27,7 +28,7 @@ impl Parse for ConstType {
 }
 
 impl Parse for Option<ConstType> {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         if input.peek() == token!(:) {
             Ok(Some(ConstType {
                 _colon: input.parse()?,
@@ -59,7 +60,7 @@ impl StmtConst {
 }
 
 impl Parse for StmtConst {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(StmtConst {
             _const: input.parse()?,
             ident: input.parse()?,

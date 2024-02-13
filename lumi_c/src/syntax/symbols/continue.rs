@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::parse::{Parse, ParseStream};
 use crate::syntax::span::Span;
@@ -8,7 +9,7 @@ pub struct Continue {
 }
 
 impl Parse for Continue {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(Continue {
             _span: Span::from_token(input.expect(token!(continue))?),
         })

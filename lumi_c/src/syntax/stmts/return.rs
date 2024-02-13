@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::{branch, DisplayTree};
 use crate::syntax::exprs::expr::Expr;
@@ -19,7 +20,7 @@ impl StmtReturn {
 }
 
 impl Parse for StmtReturn {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(StmtReturn {
             _return: input.parse()?,
             expr: {

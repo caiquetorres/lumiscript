@@ -1,3 +1,4 @@
+use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::exprs::expr::Expr;
@@ -14,7 +15,7 @@ pub struct StmtWhile {
 }
 
 impl Parse for StmtWhile {
-    fn parse(input: &mut ParseStream) -> Result<Self, String> {
+    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(StmtWhile {
             _while: input.parse()?,
             cond: Expr::parse_without_eager_brace(input)?,

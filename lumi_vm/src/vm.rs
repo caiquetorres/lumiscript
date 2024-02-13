@@ -9,7 +9,6 @@ use crate::obj::{
     Obj, ObjBoundMethod, ObjBoundMethodFunc, ObjClass, ObjFunc, ObjInst, ObjNativeFunc, ObjPrim,
     ObjPrimKind,
 };
-
 use crate::operations::add::Add;
 use crate::operations::begin_scope::BeginScope;
 use crate::operations::declare_func::DeclareFunc;
@@ -48,7 +47,6 @@ pub(crate) trait VmOperation {
 
 pub struct Vm {
     frame_has_changed: bool,
-    chunk: Chunk,
     pub(crate) frame_stack: CallFrameStack,
     pub(crate) scope_stack: ScopeStack,
     pub(crate) const_stack: ConstStack,
@@ -56,10 +54,9 @@ pub struct Vm {
 }
 
 impl Vm {
-    pub fn new(chunk: Chunk) -> Self {
+    pub fn new() -> Self {
         Self {
             frame_has_changed: false,
-            chunk,
             frame_stack: CallFrameStack::new(),
             scope_stack: ScopeStack::new(),
             const_stack: ConstStack::new(),
@@ -71,8 +68,8 @@ impl Vm {
         self.frame_has_changed = frame_has_changed;
     }
 
-    pub fn run(&mut self) -> Result<(), RuntimeError> {
-        let root_fun = ObjFactory::create(ObjFunc::root(self.chunk.clone()));
+    pub fn run(&mut self, chunk: Chunk) -> Result<(), RuntimeError> {
+        let root_fun = ObjFactory::create(ObjFunc::root(chunk));
         let root_frame = CallFrame::new(root_fun, HashMap::new());
 
         self.frame_stack.push(root_frame);
