@@ -3,7 +3,7 @@ use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::exprs::expr::Expr;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
-use crate::syntax::symbols::semicolon::Semicolon;
+use crate::syntax::symbols::Semicolon;
 
 pub struct StmtExpr {
     expr: Expr,

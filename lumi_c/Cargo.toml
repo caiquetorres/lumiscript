@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 lumi_core = { path = "../lumi_core" }
+lumi_lxr = { path = "../lumi_lxr" }

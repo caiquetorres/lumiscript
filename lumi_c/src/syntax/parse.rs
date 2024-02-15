@@ -1,8 +1,7 @@
-use lumi_core::source_code::SourceCode;
+use lumi_lxr::source_code::SourceCode;
+use lumi_lxr::token::{Token, TokenKind};
 
 use crate::compile_error::CompileError;
-use crate::scanner::token::Token;
-use crate::scanner::token::TokenKind;
 
 pub trait Parse: Sized {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError>;
@@ -36,12 +35,12 @@ impl ParseStream {
         self.prev = self.cur;
         self.cur += 1;
 
-        if token.kind == kind {
+        if token.kind() == kind {
             Ok(token)
         } else {
             Err(CompileError::new(
                 &format!("Expected '{:?}'", kind),
-                prev_token.span.end,
+                prev_token.span().end(),
                 self.source_code.clone(),
             ))
         }
@@ -65,11 +64,11 @@ impl ParseStream {
     }
 
     pub fn peek(&self) -> TokenKind {
-        self.tokens[self.cur].kind
+        self.tokens[self.cur].kind()
     }
 
     pub fn peek2(&self) -> TokenKind {
-        self.tokens[self.cur + 1].kind
+        self.tokens[self.cur + 1].kind()
     }
 
     pub fn parse<T: Parse>(&mut self) -> Result<T, CompileError> {

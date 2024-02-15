@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
-use lumi_core::line_column::LineColumn;
-use lumi_core::source_code::SourceCode;
+use lumi_lxr::line_column::LineColumn;
+use lumi_lxr::source_code::SourceCode;
 
 #[derive(Debug, Clone)]
 pub struct CompileError {
@@ -30,17 +30,18 @@ impl CompileError {
 
 impl Display for CompileError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let line = self.line_column.line;
-        let column = self.line_column.column;
+        // let line = self.line_column.line();
+        // let column = self.line_column.column();
 
-        let line_content = self.source_code.code().lines().nth(line - 1).unwrap();
+        // let line_content = self.source_code.code().lines().nth(line - 1).unwrap();
 
-        let output = format!(
-            "Compile Error: {} at Line {} at Column {}\n\n",
-            self.message, line, column,
-        ) + &format!("    {} | {}\n", line, line_content)
-            + &format!("{}^-- Here.", " ".repeat(column + 7));
+        // let output = format!(
+        //     "Compile Error: {} at Line {} at Column {}\n\n",
+        //     self.message, line, column,
+        // ) + &format!("    {} | {}\n", line, line_content)
+        //     + &format!("{}^-- Here.", " ".repeat(column + 7));
 
-        writeln!(f, "{}\n", output)
+        // writeln!(f, "{}\n", output)
+        todo!()
     }
 }

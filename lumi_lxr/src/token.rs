@@ -50,7 +50,6 @@ pub enum TokenKind {
     Continue,
     While,
     Println,
-    Print,
     Const,
     Trait,
     Impl,

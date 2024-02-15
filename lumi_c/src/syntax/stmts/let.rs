@@ -1,17 +1,17 @@
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::exprs::expr::Expr;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
 use crate::syntax::r#type::Type;
-use crate::syntax::symbols::colon::Colon;
-use crate::syntax::symbols::equal::Equal;
-use crate::syntax::symbols::ident::Ident;
-use crate::syntax::symbols::r#let::Let;
-use crate::syntax::symbols::semicolon::Semicolon;
-use crate::token;
+use crate::syntax::symbols::Colon;
+use crate::syntax::symbols::Equal;
+use crate::syntax::symbols::Ident;
+use crate::syntax::symbols::Let;
+use crate::syntax::symbols::Semicolon;
 
 pub struct LetType {
     _colon: Colon,
@@ -29,7 +29,7 @@ impl Parse for LetType {
 
 impl Parse for Option<LetType> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
-        if input.peek() == token!(:) {
+        if input.peek() == TokenKind::Colon {
             Ok(Some(LetType {
                 _colon: input.parse()?,
                 ty: input.parse()?,

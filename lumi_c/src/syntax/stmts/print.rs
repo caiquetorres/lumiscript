@@ -3,8 +3,8 @@ use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::exprs::expr::Expr;
 use crate::syntax::parse::{Parse, ParseStream};
-use crate::syntax::symbols::print::Print;
-use crate::syntax::symbols::semicolon::Semicolon;
+use crate::syntax::symbols::Print;
+use crate::syntax::symbols::Semicolon;
 
 pub struct StmtPrint {
     _println: Print,

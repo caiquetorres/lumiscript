@@ -1,9 +1,10 @@
+use lumi_lxr::span::Span;
+
 use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
-use crate::syntax::span::Span;
 
 use super::expr::Expr;
 
@@ -12,22 +13,22 @@ pub struct AssignOp {
 }
 
 impl AssignOp {
-    pub fn name(&self) -> String {
-        self.span.source_text.clone()
+    pub fn source_text(&self) -> String {
+        self.span.source_text()
     }
 }
 
 impl Parse for AssignOp {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         Ok(AssignOp {
-            span: Span::from_token(input.next()),
+            span: Span::from(input.next().span()),
         })
     }
 }
 
 impl DisplayTree for AssignOp {
     fn display(&self, layer: usize) {
-        branch(&format!("UnaryOp: {}", self.name()), layer)
+        branch(&format!("UnaryOp: {}", self.source_text()), layer)
     }
 }
 

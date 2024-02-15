@@ -3,8 +3,8 @@ use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
-use crate::syntax::symbols::brace::LeftBrace;
-use crate::syntax::symbols::brace::RightBrace;
+use crate::syntax::symbols::LeftBrace;
+use crate::syntax::symbols::RightBrace;
 
 use super::stmt::Stmt;
 

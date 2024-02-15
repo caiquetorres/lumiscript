@@ -1,6 +1,6 @@
 use crate::syntax::display_tree::DisplayTree;
-use crate::syntax::symbols::paren::LeftParen;
-use crate::syntax::symbols::paren::RightParen;
+use crate::syntax::symbols::LeftParen;
+use crate::syntax::symbols::RightParen;
 
 use super::expr::Expr;
 

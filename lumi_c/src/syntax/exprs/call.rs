@@ -3,8 +3,8 @@ use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
-use crate::syntax::symbols::paren::LeftParen;
-use crate::syntax::symbols::paren::RightParen;
+use crate::syntax::symbols::LeftParen;
+use crate::syntax::symbols::RightParen;
 
 use super::expr::Expr;
 

@@ -33,13 +33,16 @@ impl Generate for StmtFun {
                 new_chunk.write_op(Bytecode::EndScope);
 
                 let func = ConstFunc::new(
-                    &ident.name(),
-                    params.iter().map(|param| param.ident().name()).collect(),
+                    &ident.source_text(),
+                    params
+                        .iter()
+                        .map(|param| param.ident().source_text())
+                        .collect(),
                     new_chunk,
                 );
 
                 chunk.load_constant(Constant::Func(func));
-                chunk.load_constant(Constant::Str(ident.name()));
+                chunk.load_constant(Constant::Str(ident.source_text()));
             }
             StmtFun::Proto { .. } => {
                 // ignore, prototypes are only used for trait declarations and in the semantic analysis step.
@@ -90,13 +93,13 @@ impl Generate for Stmt {
                 }
             }
             Stmt::Trait(tr) => {
-                chunk.load_constant(Constant::Str(tr.ident().name().clone()));
+                chunk.load_constant(Constant::Str(tr.ident().source_text().clone()));
                 chunk.write_op(Bytecode::DeclareTrait);
             }
             Stmt::Impl(im) => {
                 if let Some(tr) = im.tr() {
-                    chunk.load_constant(Constant::Str(im.ty().ident().name().clone()));
-                    chunk.load_constant(Constant::Str(tr.ident().name().clone()));
+                    chunk.load_constant(Constant::Str(im.ty().ident().source_text().clone()));
+                    chunk.load_constant(Constant::Str(tr.ident().source_text().clone()));
                     chunk.write_op(Bytecode::ImplTrait);
                 }
 
@@ -107,8 +110,7 @@ impl Generate for Stmt {
                 for method in im.methods() {
                     if let StmtFun::Default { .. } = method {
                         method.generate(chunk);
-                        chunk.load_constant(Constant::Str(im.ty().ident().name().clone()));
-
+                        chunk.load_constant(Constant::Str(im.ty().ident().source_text().clone()));
                         chunk.write_op(Bytecode::DeclareMethod);
                     }
                 }
@@ -132,12 +134,12 @@ impl Generate for Stmt {
             }
             Stmt::Let(stmt) => {
                 stmt.expr().generate(chunk);
-                chunk.load_constant(Constant::Str(stmt.ident().name()));
+                chunk.load_constant(Constant::Str(stmt.ident().source_text()));
                 chunk.write_op(Bytecode::DeclareVar);
             }
             Stmt::Const(stmt) => {
                 stmt.expr().generate(chunk);
-                chunk.load_constant(Constant::Str(stmt.ident().name()));
+                chunk.load_constant(Constant::Str(stmt.ident().source_text()));
                 chunk.write_op(Bytecode::DeclareVar);
             }
             Stmt::Expr(expr) => {
@@ -167,12 +169,12 @@ impl Generate for Expr {
     fn generate(&self, chunk: &mut Chunk) {
         match self {
             Expr::Ident(ident) => {
-                chunk.load_constant(Constant::Str(ident.ident.name()));
+                chunk.load_constant(Constant::Str(ident.ident.source_text()));
                 chunk.write_op(Bytecode::GetVar);
             }
             Expr::Get(get) => {
                 get.expr.generate(chunk);
-                chunk.load_constant(Constant::Str(get.ident.name()));
+                chunk.load_constant(Constant::Str(get.ident.source_text()));
                 chunk.write_op(Bytecode::GetProp);
             }
             Expr::Assign(assign) => {
@@ -180,12 +182,12 @@ impl Generate for Expr {
 
                 match assign.left.as_ref() {
                     Expr::Ident(ident) => {
-                        chunk.load_constant(Constant::Str(ident.ident.name()));
+                        chunk.load_constant(Constant::Str(ident.ident.source_text()));
                         chunk.write_op(Bytecode::DeclareVar);
                         // REVIEW: Should we have a "SetVar" bytecode?
                     }
                     Expr::Get(get) => {
-                        chunk.load_constant(Constant::Str(get.ident.name()));
+                        chunk.load_constant(Constant::Str(get.ident.source_text()));
                         get.expr.generate(chunk);
                         chunk.write_op(Bytecode::SetProp);
                     }
@@ -198,12 +200,12 @@ impl Generate for Expr {
                     chunk.write_op(Bytecode::Lit);
                 }
                 ExprLit::Num { span } => {
-                    let value: f64 = span.source_text.parse().unwrap();
+                    let value: f64 = span.source_text().parse().unwrap();
                     chunk.load_constant(Constant::Num(value));
                     chunk.write_op(Bytecode::Lit);
                 }
                 ExprLit::Bool { span } => {
-                    let value: bool = span.source_text.parse().unwrap();
+                    let value: bool = span.source_text().parse().unwrap();
                     chunk.load_constant(Constant::Bool(value));
                     chunk.write_op(Bytecode::Lit);
                 }
@@ -273,7 +275,7 @@ impl Generate for Expr {
             }
             Expr::Class(class) => {
                 for field_init in class.field_inits.iter().rev() {
-                    let name = field_init.ident().name();
+                    let name = field_init.ident().source_text();
 
                     if let Some(init) = field_init.init() {
                         init.expr().generate(chunk);
@@ -286,7 +288,7 @@ impl Generate for Expr {
                 }
 
                 if let Expr::Ident(ident) = class.class.as_ref() {
-                    chunk.load_constant(Constant::Str(ident.ident.name()));
+                    chunk.load_constant(Constant::Str(ident.ident.source_text()));
                 }
 
                 chunk.write_op(Bytecode::InstantiateClass);

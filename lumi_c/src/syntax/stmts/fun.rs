@@ -1,20 +1,20 @@
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
 use crate::syntax::r#type::Type;
-use crate::syntax::symbols::arrow::Arrow;
-use crate::syntax::symbols::colon::Colon;
-use crate::syntax::symbols::fun::Fun;
-use crate::syntax::symbols::ident::Ident;
-use crate::syntax::symbols::paren::LeftParen;
-use crate::syntax::symbols::paren::RightParen;
-use crate::syntax::symbols::r#extern::Extern;
-use crate::syntax::symbols::r#static::Static;
-use crate::syntax::symbols::semicolon::Semicolon;
-use crate::token;
+use crate::syntax::symbols::Arrow;
+use crate::syntax::symbols::Colon;
+use crate::syntax::symbols::Extern;
+use crate::syntax::symbols::Fun;
+use crate::syntax::symbols::Ident;
+use crate::syntax::symbols::LeftParen;
+use crate::syntax::symbols::RightParen;
+use crate::syntax::symbols::Semicolon;
+use crate::syntax::symbols::Static;
 
 use super::block::StmtBlock;
 
@@ -34,7 +34,7 @@ impl Parse for ParamType {
 
 impl Parse for Option<ParamType> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
-        if input.peek() == token!(:) {
+        if input.peek() == TokenKind::Colon {
             Ok(Some(ParamType {
                 _colon: input.parse()?,
                 ty: input.parse()?,
@@ -73,13 +73,13 @@ impl Parse for Vec<Param> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut params = vec![];
 
-        if input.peek() == token!(')') {
+        if input.peek() == TokenKind::RightParen {
             Ok(params)
         } else {
             params.push(input.parse()?);
 
-            while input.peek() == token!(,) {
-                input.expect(token!(,))?;
+            while input.peek() == TokenKind::Comma {
+                input.expect(TokenKind::Comma)?;
                 params.push(input.parse()?);
             }
 
@@ -123,7 +123,7 @@ impl Parse for ReturnType {
 
 impl Parse for Option<ReturnType> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
-        if input.peek() == token!(->) {
+        if input.peek() == TokenKind::MinusGreater {
             Ok(Some(ReturnType {
                 _arrow: input.parse()?,
                 ty: input.parse()?,
@@ -182,7 +182,7 @@ impl Parse for StmtFun {
                 _semicolon: input.parse()?,
             })
         } else {
-            if input.peek() == token!(;) {
+            if input.peek() == TokenKind::Semicolon {
                 Ok(StmtFun::Proto {
                     _extern,
                     r#static,
@@ -214,7 +214,7 @@ impl Parse for Vec<StmtFun> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut functions = vec![];
 
-        while input.peek() != token!('}') {
+        while input.peek() != TokenKind::RightBrace {
             functions.push(input.parse()?)
         }
 

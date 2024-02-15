@@ -1,6 +1,6 @@
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::scanner::token::TokenKind;
-use crate::token;
 
 use super::display_tree::DisplayTree;
 use super::parse::Parse;
@@ -25,7 +25,7 @@ impl Parse for Ast {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut stmts = vec![];
 
-        while input.peek() != token!(eof) {
+        while input.peek() != TokenKind::Eof {
             if let Ok(stmt) = input.parse::<Stmt>() {
                 stmts.push(stmt);
             } else {

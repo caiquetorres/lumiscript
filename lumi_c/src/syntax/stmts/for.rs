@@ -2,9 +2,9 @@ use crate::compile_error::CompileError;
 use crate::syntax::display_tree::{branch, DisplayTree};
 use crate::syntax::exprs::expr::Expr;
 use crate::syntax::parse::{Parse, ParseStream};
-use crate::syntax::symbols::ident::Ident;
-use crate::syntax::symbols::r#for::For;
-use crate::syntax::symbols::r#in::In;
+use crate::syntax::symbols::For;
+use crate::syntax::symbols::Ident;
+use crate::syntax::symbols::In;
 
 use super::stmt::Stmt;
 

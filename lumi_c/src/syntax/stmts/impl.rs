@@ -1,31 +1,20 @@
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::ident;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
 use crate::syntax::r#type::Type;
-use crate::syntax::span::Span;
-use crate::syntax::symbols::brace::LeftBrace;
-use crate::syntax::symbols::brace::RightBrace;
-use crate::syntax::symbols::ident::Ident;
-use crate::syntax::symbols::r#for::For;
-use crate::token;
-use crate::scanner::token::TokenKind;
+use crate::syntax::symbols::For;
+use crate::syntax::symbols::Ident;
+use crate::syntax::symbols::LeftBrace;
+use crate::syntax::symbols::RightBrace;
+use crate::syntax_symbol;
 
 use super::fun::StmtFun;
 
-pub struct Impl {
-    _span: Span,
-}
-
-impl Parse for Impl {
-    fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
-        Ok(Impl {
-            _span: Span::from_token(input.expect(token!(impl))?),
-        })
-    }
-}
+syntax_symbol!(Impl, TokenKind::Impl);
 
 pub struct Trait {
     ident: Ident,
@@ -49,13 +38,13 @@ impl Parse for Trait {
 
 impl DisplayTree for Trait {
     fn display(&self, layer: usize) {
-        branch(&format!("Trait: {}", self.ident.name()), layer)
+        branch(&format!("Trait: {}", self.ident.source_text()), layer)
     }
 }
 
 impl Parse for Option<Trait> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
-        if input.peek() == ident!() && input.peek2() == token!(for) {
+        if input.peek() == TokenKind::Ident && input.peek2() == TokenKind::For {
             Ok(Some(Trait {
                 ident: input.parse()?,
                 _for: input.parse()?,

@@ -142,10 +142,10 @@ impl Lexer {
     }
 
     fn next_token(&mut self) -> Option<Token> {
-        while ((self.peek() == '/' && self.peek2() == '*')
-            || (self.peek() == '/' && self.peek2() == '/')
-            || self.peek().is_whitespace())
-            && !self.is_at_end()
+        while !self.is_at_end()
+            && ((self.peek() == '/' && self.peek2() == '*')
+                || (self.peek() == '/' && self.peek2() == '/')
+                || self.peek().is_whitespace())
         {
             if self.peek() == '/' && self.peek2() == '*' {
                 self.skip_multiline_line_comment();
@@ -155,7 +155,6 @@ impl Lexer {
                 self.skip_whitespace();
             }
         }
-        self.skip_whitespace();
         if self.cur_index() > self.source_code.code().len() {
             None
         } else if self.is_at_end() {
@@ -330,6 +329,7 @@ impl Lexer {
                             "return" => TokenKind::Return,
                             "break" => TokenKind::Break,
                             "continue" => TokenKind::Continue,
+                            "println" => TokenKind::Println,
                             _ => TokenKind::Ident,
                         };
                         Some(self.create_token(kind, start, end))

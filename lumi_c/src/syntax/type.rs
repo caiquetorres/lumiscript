@@ -1,11 +1,11 @@
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
-use crate::token;
 
 use super::parse::Parse;
 use super::parse::ParseStream;
-use super::symbols::ident::Ident;
+use super::symbols::Ident;
 use crate::syntax::display_tree::DisplayTree;
 
 pub struct Type {
@@ -28,7 +28,7 @@ impl Parse for Type {
         Ok(Type {
             ident: input.parse()?,
             nullable: {
-                if input.peek() == token!(?) {
+                if input.peek() == TokenKind::Interrogation {
                     input.next();
                     true
                 } else {
@@ -44,7 +44,7 @@ impl DisplayTree for Type {
         branch(
             &format!(
                 "Type: {}{}",
-                self.ident.name(),
+                self.ident.source_text(),
                 if self.nullable { "?" } else { "" }
             ),
             layer,

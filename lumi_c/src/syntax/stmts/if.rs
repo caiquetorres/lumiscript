@@ -1,13 +1,13 @@
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::exprs::expr::Expr;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
-use crate::syntax::symbols::r#else::Else;
-use crate::syntax::symbols::r#if::If;
-use crate::token;
+use crate::syntax::symbols::Else;
+use crate::syntax::symbols::If;
 
 use super::stmt::Stmt;
 
@@ -75,7 +75,7 @@ impl Parse for StmtIf {
             cond: Expr::parse_without_eager_brace(input)?,
             stmt: input.parse()?,
             r#else: {
-                if input.peek() == token!(else) {
+                if input.peek() == TokenKind::Else {
                     input.parse()?
                 } else {
                     None

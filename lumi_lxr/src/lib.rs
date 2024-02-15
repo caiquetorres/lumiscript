@@ -1,4 +1,6 @@
-pub mod utils;
+pub mod lexer;
 pub mod token;
 pub mod token_stream;
-pub mod lexer;
+mod utils;
+
+pub use utils::*;

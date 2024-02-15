@@ -1,14 +1,12 @@
+use lumi_lxr::span::Span;
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::ident;
-use crate::number;
-use crate::scanner::token::token;
-use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
-use crate::syntax::span::Span;
-use crate::syntax::symbols::paren::LeftParen;
-use crate::syntax::symbols::paren::RightParen;
+use crate::syntax::symbols::LeftParen;
+use crate::syntax::symbols::RightParen;
 
 use super::assign::ExprAssign;
 use super::binary::ExprBinary;
@@ -54,13 +52,13 @@ impl Parse for Vec<Expr> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut exprs = vec![];
 
-        if input.peek() == token!(')') {
+        if input.peek() == TokenKind::RightParen {
             Ok(exprs)
         } else {
             exprs.push(input.parse()?);
 
-            while input.peek() == token!(,) {
-                input.expect(token!(,))?;
+            while input.peek() == TokenKind::Comma {
+                input.expect(TokenKind::Comma)?;
                 exprs.push(input.parse()?);
             }
 
@@ -100,7 +98,7 @@ fn ambiguous_expr(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, C
 fn assignment(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut expr = equality(input, allow_struct)?;
 
-    if input.peek() == token!(=) {
+    if input.peek() == TokenKind::Equal {
         let operator = input.parse()?;
         let right = assignment(input, allow_struct)?;
 
@@ -117,7 +115,7 @@ fn assignment(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, Compi
 fn equality(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left = comparison(input, allow_struct)?;
 
-    while input.peek() == token!(!=) || input.peek() == token!(==) {
+    while input.peek() == TokenKind::BangEqual || input.peek() == TokenKind::EqualEqual {
         let operator = input.parse()?;
         let right = comparison(input, allow_struct)?;
 
@@ -134,10 +132,10 @@ fn equality(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, Compile
 fn comparison(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left: Expr = range(input, allow_struct)?;
 
-    while input.peek() == token!(>)
-        || input.peek() == token!(>=)
-        || input.peek() == token!(<)
-        || input.peek() == token!(<=)
+    while input.peek() == TokenKind::Greater
+        || input.peek() == TokenKind::GreaterEqual
+        || input.peek() == TokenKind::Less
+        || input.peek() == TokenKind::LessEqual
     {
         let operator = input.parse()?;
         let right = range(input, allow_struct)?;
@@ -155,7 +153,7 @@ fn comparison(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, Compi
 fn range(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left: Expr = term(input, allow_struct)?;
 
-    while input.peek() == token!(..) || input.peek() == token!(..=) {
+    while input.peek() == TokenKind::DotDot || input.peek() == TokenKind::DotDotEqual {
         let operator = input.parse()?;
         let right = term(input, allow_struct)?;
 
@@ -172,7 +170,7 @@ fn range(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileErr
 fn term(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left = factor(input, allow_struct)?;
 
-    while input.peek() == token!(+) || input.peek() == token!(-) {
+    while input.peek() == TokenKind::Plus || input.peek() == TokenKind::Minus {
         let operator = input.parse()?;
         let right = factor(input, allow_struct)?;
 
@@ -189,7 +187,7 @@ fn term(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileErro
 fn factor(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut left = unary(input, allow_struct)?;
 
-    while input.peek() == token!(*) || input.peek() == token!(/) {
+    while input.peek() == TokenKind::Star || input.peek() == TokenKind::Slash {
         let operator = input.parse()?;
         let right = unary(input, allow_struct)?;
 
@@ -204,7 +202,10 @@ fn factor(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileEr
 }
 
 fn unary(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
-    if input.peek() == token!(+) || input.peek() == token!(-) || input.peek() == token!(!) {
+    if input.peek() == TokenKind::Plus
+        || input.peek() == TokenKind::Minus
+        || input.peek() == TokenKind::Bang
+    {
         Ok(Expr::Unary(ExprUnary {
             operator: input.parse()?,
             expr: Box::new(unary(input, allow_struct)?),
@@ -217,7 +218,7 @@ fn unary(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileErr
 fn call(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileError> {
     let mut expr = primary(input)?;
 
-    if input.peek() == token!('{') && allow_struct {
+    if input.peek() == TokenKind::RightBrace && allow_struct {
         Ok(Expr::Class(ExprClass {
             class: Box::new(expr),
             left_brace: input.parse()?,
@@ -225,15 +226,15 @@ fn call(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileErro
             right_brace: input.parse()?,
         }))
     } else {
-        while input.peek() == token!(.) || input.peek() == token!('(') {
+        while input.peek() == TokenKind::Dot || input.peek() == TokenKind::LeftParen {
             expr = match input.peek() {
-                token!('(') => Expr::Call(ExprCall {
+                TokenKind::LeftParen => Expr::Call(ExprCall {
                     callee: Box::new(expr),
                     left_paren: input.parse()?,
                     args: input.parse()?,
                     right_paren: input.parse()?,
                 }),
-                token!(.) => Expr::Get(ExprGet {
+                TokenKind::Dot => Expr::Get(ExprGet {
                     expr: Box::new(expr),
                     dot: input.parse()?,
                     ident: input.parse()?,
@@ -248,18 +249,17 @@ fn call(input: &mut ParseStream, allow_struct: bool) -> Result<Expr, CompileErro
 
 fn primary(input: &mut ParseStream) -> Result<Expr, CompileError> {
     match input.peek() {
-        ident!() => Ok(Expr::Ident(input.parse()?)),
-        token!(nil) => Ok(Expr::Lit(ExprLit::Nil {
-            span: Span::from_token(input.next()),
+        TokenKind::Ident => Ok(Expr::Ident(input.parse()?)),
+        TokenKind::Nil => Ok(Expr::Lit(ExprLit::Nil {
+            span: Span::from(input.next().span()),
         })),
-        number!() => Ok(Expr::Lit(ExprLit::Num {
-            span: Span::from_token(input.next()),
+        TokenKind::Number => Ok(Expr::Lit(ExprLit::Num {
+            span: Span::from(input.next().span()),
         })),
-        token!(false) | token!(true) => Ok(Expr::Lit(ExprLit::Bool {
-            span: Span::from_token(input.next()),
+        TokenKind::True | TokenKind::False => Ok(Expr::Lit(ExprLit::Bool {
+            span: Span::from(input.next().span()),
         })),
-        token!('(') => {
-            // REVIEW: Is a good solution ignoring the parenthesis?
+        TokenKind::LeftParen => {
             input.parse::<LeftParen>()?;
             let expr: Expr = input.parse()?;
             input.parse::<RightParen>()?;
@@ -267,7 +267,7 @@ fn primary(input: &mut ParseStream) -> Result<Expr, CompileError> {
         }
         _ => Err(CompileError::new(
             "Expression expected",
-            input.cur().span.start,
+            input.cur().span().start(),
             input.source_code(),
         )),
     }

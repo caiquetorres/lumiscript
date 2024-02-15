@@ -1,9 +1,9 @@
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
-use crate::token;
 
 use super::block::StmtBlock;
 use super::class::StmtClass;
@@ -31,11 +31,11 @@ pub enum Stmt {
     Impl(StmtImpl),
     Trait(StmtTrait),
     Class(StmtClass),
-    Return(StmtReturn),
     If(StmtIf),
     While(StmtWhile),
     For(StmtFor),
     Break(StmtBreak),
+    Return(StmtReturn),
     Continue(StmtContinue),
 }
 
@@ -55,7 +55,7 @@ impl Parse for Vec<Stmt> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut stmts = vec![];
 
-        while input.peek() != token!('}') && input.peek() != token!(eof) {
+        while input.peek() != TokenKind::RightBrace && input.peek() != TokenKind::Eof {
             stmts.push(input.parse::<Stmt>()?);
         }
 
@@ -67,7 +67,7 @@ impl Parse for Vec<Box<Stmt>> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
         let mut stmts = vec![];
 
-        while input.peek() != token!('}') && input.peek() != token!(eof) {
+        while input.peek() != TokenKind::RightBrace && input.peek() != TokenKind::Eof {
             stmts.push(Box::new(input.parse::<Stmt>()?));
         }
 
@@ -115,20 +115,20 @@ impl DisplayTree for Stmt {
 
 fn ambiguous_stmt(input: &mut ParseStream) -> Result<Stmt, CompileError> {
     match input.peek() {
-        token!('{') => Ok(Stmt::Block(input.parse()?)),
-        token!(let) => Ok(Stmt::Let(input.parse()?)),
-        token!(println) => Ok(Stmt::Print(input.parse()?)),
-        token!(static) | token!(extern) | token!(fun) => Ok(Stmt::Fun(input.parse()?)),
-        token!(impl) => Ok(Stmt::Impl(input.parse()?)),
-        token!(trait) => Ok(Stmt::Trait(input.parse()?)),
-        token!(class) => Ok(Stmt::Class(input.parse()?)),
-        token!(return) => Ok(Stmt::Return(input.parse()?)),
-        token!(if) => Ok(Stmt::If(input.parse()?)),
-        token!(while) => Ok(Stmt::While(input.parse()?)),
-        token!(for) => Ok(Stmt::For(input.parse()?)),
-        token!(break) => Ok(Stmt::Break(input.parse()?)),
-        token!(continue) => Ok(Stmt::Continue(input.parse()?)),
-        token!(const) => Ok(Stmt::Const(input.parse()?)),
+        TokenKind::LeftBrace => Ok(Stmt::Block(input.parse()?)),
+        TokenKind::Let => Ok(Stmt::Let(input.parse()?)),
+        TokenKind::Println => Ok(Stmt::Print(input.parse()?)),
+        TokenKind::Static | TokenKind::Extern | TokenKind::Fun => Ok(Stmt::Fun(input.parse()?)),
+        TokenKind::Impl => Ok(Stmt::Impl(input.parse()?)),
+        TokenKind::Trait => Ok(Stmt::Trait(input.parse()?)),
+        TokenKind::Class => Ok(Stmt::Class(input.parse()?)),
+        TokenKind::Return => Ok(Stmt::Return(input.parse()?)),
+        TokenKind::If => Ok(Stmt::If(input.parse()?)),
+        TokenKind::While => Ok(Stmt::While(input.parse()?)),
+        TokenKind::For => Ok(Stmt::For(input.parse()?)),
+        TokenKind::Break => Ok(Stmt::Break(input.parse()?)),
+        TokenKind::Continue => Ok(Stmt::Continue(input.parse()?)),
+        TokenKind::Const => Ok(Stmt::Const(input.parse()?)),
         _ => Ok(Stmt::Expr(input.parse()?)),
     }
 }

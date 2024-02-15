@@ -98,6 +98,7 @@ dependencies = [
  "compiler",
  "lumi_core",
  "lumi_lxr",
+ "lumi_psr",
  "type_checker",
  "virtual_machine",
 ]
@@ -113,6 +114,7 @@ name = "compiler"
 version = "0.1.0"
 dependencies = [
  "lumi_core",
+ "lumi_lxr",
 ]
 
 [[package]]
@@ -128,6 +130,13 @@ version = "0.1.0"
 [[package]]
 name = "lumi_lxr"
 version = "0.1.0"
+
+[[package]]
+name = "lumi_psr"
+version = "0.1.0"
+dependencies = [
+ "lumi_lxr",
+]
 
 [[package]]
 name = "proc-macro2"

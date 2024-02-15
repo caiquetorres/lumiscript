@@ -25,6 +25,22 @@ impl Span {
         }
     }
 
+    pub fn from(span: &Self) -> Self {
+        Self {
+            start: span.start,
+            end: span.end,
+            source_code: span.source_code.clone(),
+        }
+    }
+
+    pub fn range(start: &Self, end: &Self) -> Self {
+        Self {
+            start: start.start,
+            end: end.end,
+            source_code: start.source_code.clone(),
+        }
+    }
+
     /// Gets the span start line column.
     pub fn start(&self) -> LineColumn {
         self.start
@@ -39,4 +55,19 @@ impl Span {
     pub fn source_text(&self) -> String {
         String::from(&self.source_code[self.start..self.end])
     }
+
+    pub fn source_code(&self) -> &SourceCode {
+        &self.source_code
+    }
+}
+
+#[macro_export]
+macro_rules! span {
+    ($t:ident) => {
+        impl $t {
+            pub fn span(&self) -> &Span {
+                &self.span
+            }
+        }
+    };
 }

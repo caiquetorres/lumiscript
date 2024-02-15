@@ -1,11 +1,10 @@
+pub mod assign;
 pub mod binary;
+pub mod call;
+pub mod class;
 pub mod expr;
+pub mod get;
 pub mod ident;
 pub mod lit;
 pub mod paren;
 pub mod unary;
-pub mod class_init;
-pub mod get;
-pub mod call;
-pub mod assign;
-pub mod class;

@@ -1,11 +1,11 @@
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::{branch, DisplayTree};
 use crate::syntax::exprs::expr::Expr;
 use crate::syntax::parse::{Parse, ParseStream};
-use crate::syntax::symbols::r#return::Return;
-use crate::syntax::symbols::semicolon::Semicolon;
-use crate::token;
+use crate::syntax::symbols::Return;
+use crate::syntax::symbols::Semicolon;
 
 pub struct StmtReturn {
     _return: Return,
@@ -24,7 +24,7 @@ impl Parse for StmtReturn {
         Ok(StmtReturn {
             _return: input.parse()?,
             expr: {
-                if input.peek() != token!(;) {
+                if input.peek() != TokenKind::Semicolon {
                     Some(input.parse()?)
                 } else {
                     None

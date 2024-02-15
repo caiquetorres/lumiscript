@@ -3,10 +3,10 @@ use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
-use crate::syntax::symbols::brace::LeftBrace;
-use crate::syntax::symbols::brace::RightBrace;
-use crate::syntax::symbols::ident::Ident;
-use crate::syntax::symbols::r#trait::Trait;
+use crate::syntax::symbols::LeftBrace;
+use crate::syntax::symbols::RightBrace;
+use crate::syntax::symbols::Ident;
+use crate::syntax::symbols::Trait;
 
 use super::fun::StmtFun;
 

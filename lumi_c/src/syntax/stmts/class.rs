@@ -1,16 +1,16 @@
+use lumi_lxr::token::TokenKind;
+
 use crate::compile_error::CompileError;
-use crate::scanner::token::TokenKind;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
 use crate::syntax::r#type::Type;
-use crate::syntax::symbols::brace::LeftBrace;
-use crate::syntax::symbols::brace::RightBrace;
-use crate::syntax::symbols::class::Class;
-use crate::syntax::symbols::colon::Colon;
-use crate::syntax::symbols::ident::Ident;
-use crate::token;
+use crate::syntax::symbols::LeftBrace;
+use crate::syntax::symbols::RightBrace;
+use crate::syntax::symbols::Class;
+use crate::syntax::symbols::Colon;
+use crate::syntax::symbols::Ident;
 
 pub struct Field {
     ident: Ident,
@@ -38,14 +38,14 @@ impl DisplayTree for Field {
 
 impl Parse for Vec<Field> {
     fn parse(input: &mut ParseStream) -> Result<Self, CompileError> {
-        if input.peek() == token!('}') {
+        if input.peek() == TokenKind::RightBrace {
             Ok(vec![])
         } else {
             let mut fields = vec![];
             fields.push(input.parse()?);
 
-            while input.peek() != token!('}') {
-                input.expect(token!(,))?;
+            while input.peek() != TokenKind::RightBrace {
+                input.expect(TokenKind::Comma)?;
                 fields.push(input.parse()?);
             }
 
@@ -73,7 +73,7 @@ pub struct StmtClass {
 
 impl StmtClass {
     pub fn name(&self) -> String {
-        self.ident.name()
+        self.ident.source_text()
     }
 
     pub fn fields(&self) -> &Vec<Field> {

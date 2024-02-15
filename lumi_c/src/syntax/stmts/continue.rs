@@ -2,8 +2,8 @@ use crate::compile_error::CompileError;
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::{Parse, ParseStream};
-use crate::syntax::symbols::r#continue::Continue;
-use crate::syntax::symbols::semicolon::Semicolon;
+use crate::syntax::symbols::Continue;
+use crate::syntax::symbols::Semicolon;
 
 pub struct StmtContinue {
     _return: Continue,

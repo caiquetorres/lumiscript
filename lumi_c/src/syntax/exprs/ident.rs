@@ -3,7 +3,7 @@ use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
 use crate::syntax::parse::Parse;
 use crate::syntax::parse::ParseStream;
-use crate::syntax::symbols::ident::Ident;
+use crate::syntax::symbols::Ident;
 
 pub struct ExprIdent {
     pub ident: Ident,
@@ -19,6 +19,6 @@ impl Parse for ExprIdent {
 
 impl DisplayTree for ExprIdent {
     fn display(&self, layer: usize) {
-        branch(&format!("IdentExpr: {}", self.ident.name()), layer);
+        branch(&format!("IdentExpr: {}", self.ident.source_text()), layer);
     }
 }

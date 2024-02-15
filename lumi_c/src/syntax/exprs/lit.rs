@@ -1,6 +1,7 @@
+use lumi_lxr::span::Span;
+
 use crate::syntax::display_tree::branch;
 use crate::syntax::display_tree::DisplayTree;
-use crate::syntax::span::Span;
 
 pub enum ExprLit {
     Num { span: Span },
@@ -11,9 +12,9 @@ pub enum ExprLit {
 impl ExprLit {
     pub fn name(&self) -> String {
         match self {
-            Self::Num { span } => span.source_text.clone(),
-            Self::Bool { span } => span.source_text.clone(),
-            Self::Nil { span } => span.source_text.clone(),
+            Self::Num { span } => span.source_text(),
+            Self::Bool { span } => span.source_text(),
+            Self::Nil { span } => span.source_text(),
         }
     }
 }
