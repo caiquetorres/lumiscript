@@ -6,6 +6,7 @@ use crate::parser::{ParseError, ParseStream};
 
 use super::Expr;
 
+#[derive(Debug)]
 pub struct UnaryOp {
     span: Span,
 }
@@ -34,6 +35,7 @@ impl DisplayTree for UnaryOp {
     }
 }
 
+#[derive(Debug)]
 pub struct UnaryExpr {
     span: Span,
     op: UnaryOp,

@@ -5,6 +5,7 @@ use crate::symbols::{Dot, Ident};
 
 use super::Expr;
 
+#[derive(Debug)]
 pub struct GetExpr {
     span: Span,
     expr: Box<Expr>,

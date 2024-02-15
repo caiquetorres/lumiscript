@@ -8,6 +8,7 @@ use crate::symbols::{Colon, Ident, LeftBrace, RightBrace};
 
 use super::Expr;
 
+#[derive(Debug)]
 pub struct Field {
     span: Span,
     ident: Ident,
@@ -86,6 +87,7 @@ impl DisplayTree for Vec<Field> {
     }
 }
 
+#[derive(Debug)]
 pub struct ClassExpr {
     span: Span,
     cls: Box<Expr>,

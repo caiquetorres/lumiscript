@@ -7,6 +7,7 @@ use crate::parse::Parse;
 use crate::parser::{ParseError, ParseStream};
 use crate::symbols::{Return, Semicolon};
 
+#[derive(Debug)]
 pub struct ReturnStmt {
     pub(crate) span: Span,
     pub(crate) expr: Expr,

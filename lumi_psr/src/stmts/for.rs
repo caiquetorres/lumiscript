@@ -10,6 +10,7 @@ use crate::symbols::{For, Ident, In};
 
 use super::block::BlockStmt;
 
+#[derive(Debug)]
 pub struct ForStmt {
     span: Span,
     ident: Ident,

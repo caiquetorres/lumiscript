@@ -3,6 +3,7 @@ use lumi_lxr::span::Span;
 use crate::display_tree::branch;
 use crate::display_tree::DisplayTree;
 
+#[derive(Debug)]
 pub enum LitExpr {
     Num { span: Span },
     Bool { span: Span },

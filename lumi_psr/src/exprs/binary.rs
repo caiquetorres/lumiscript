@@ -6,6 +6,7 @@ use crate::parser::{ParseError, ParseStream};
 
 use super::Expr;
 
+#[derive(Debug)]
 pub struct BinaryOp {
     span: Span,
 }
@@ -34,6 +35,7 @@ impl DisplayTree for BinaryOp {
     }
 }
 
+#[derive(Debug)]
 pub struct BinaryExpr {
     span: Span,
     left: Box<Expr>,

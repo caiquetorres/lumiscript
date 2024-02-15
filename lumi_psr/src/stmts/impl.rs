@@ -13,6 +13,7 @@ use crate::ty::Type;
 
 use super::block::BlockStmt;
 
+#[derive(Debug)]
 pub enum Method {
     Default {
         span: Span,
@@ -174,6 +175,7 @@ impl DisplayTree for Vec<Method> {
     }
 }
 
+#[derive(Debug)]
 pub struct ImplStmt {
     span: Span,
     tr: Option<Ident>,

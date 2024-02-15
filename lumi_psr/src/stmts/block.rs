@@ -9,6 +9,7 @@ use crate::symbols::{LeftBrace, RightBrace};
 
 use super::Stmt;
 
+#[derive(Debug)]
 pub struct BlockStmt {
     span: Span,
     stmts: Vec<Stmt>,

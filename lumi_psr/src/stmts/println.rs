@@ -10,6 +10,7 @@ use crate::parser::ParseStream;
 use crate::symbols::Println;
 use crate::symbols::Semicolon;
 
+#[derive(Debug)]
 pub struct PrintlnStmt {
     span: Span,
     expr: Expr,

@@ -10,6 +10,7 @@ use crate::symbols::If;
 use super::block::BlockStmt;
 use super::Stmt;
 
+#[derive(Debug)]
 pub struct IfStmt {
     span: Span,
     cond: Expr,

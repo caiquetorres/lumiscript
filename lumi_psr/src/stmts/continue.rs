@@ -6,6 +6,7 @@ use crate::parse::Parse;
 use crate::parser::{ParseError, ParseStream};
 use crate::symbols::{Continue, Semicolon};
 
+#[derive(Debug)]
 pub struct ContinueStmt {
     span: Span,
 }

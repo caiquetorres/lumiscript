@@ -7,6 +7,7 @@ use crate::{
 
 use super::Expr;
 
+#[derive(Debug)]
 pub struct ParenExpr {
     span: Span,
     expr: Box<Expr>,

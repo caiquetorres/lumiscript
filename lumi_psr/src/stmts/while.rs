@@ -10,6 +10,7 @@ use crate::symbols::While;
 use super::block::BlockStmt;
 use super::Stmt;
 
+#[derive(Debug)]
 pub struct WhileStmt {
     span: Span,
     cond: Expr,

@@ -39,6 +39,7 @@ pub mod r#return;
 pub mod r#trait;
 pub mod r#while;
 
+#[derive(Debug)]
 pub enum Stmt {
     Println(PrintlnStmt),
     Block(BlockStmt),

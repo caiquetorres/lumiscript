@@ -24,6 +24,7 @@ pub mod lit;
 pub mod paren;
 pub mod unary;
 
+#[derive(Debug)]
 pub enum Expr {
     Ident(IdentExpr),
     Lit(LitExpr),

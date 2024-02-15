@@ -12,6 +12,7 @@ use crate::symbols::{
 };
 use crate::ty::Type;
 
+#[derive(Debug)]
 pub struct ProtoMethod {
     span: Span,
     ident: Ident,
@@ -92,6 +93,7 @@ impl DisplayTree for Vec<ProtoMethod> {
     }
 }
 
+#[derive(Debug)]
 pub struct TraitStmt {
     span: Span,
     ident: Ident,

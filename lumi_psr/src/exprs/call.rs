@@ -35,6 +35,7 @@ impl DisplayTree for Vec<Expr> {
     }
 }
 
+#[derive(Debug)]
 pub struct CallExpr {
     span: Span,
     callee: Box<Expr>,

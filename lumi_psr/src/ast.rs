@@ -5,6 +5,7 @@ use crate::parse::Parse;
 use crate::parser::{ParseError, ParseStream};
 use crate::stmts::Stmt;
 
+#[derive(Debug)]
 pub struct Ast {
     stmts: Vec<Stmt>,
 }

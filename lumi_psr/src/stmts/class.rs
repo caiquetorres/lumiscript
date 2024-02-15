@@ -64,6 +64,7 @@ impl DisplayTree for Vec<Field> {
     }
 }
 
+#[derive(Debug)]
 pub struct ClassStmt {
     span: Span,
     ident: Ident,

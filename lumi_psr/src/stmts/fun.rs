@@ -10,6 +10,7 @@ use crate::ty::Type;
 
 use super::block::BlockStmt;
 
+#[derive(Debug)]
 pub enum FunStmt {
     Default {
         span: Span,

@@ -6,6 +6,7 @@ use crate::parse::Parse;
 use crate::parser::{ParseError, ParseStream};
 use crate::symbols::{Break, Semicolon};
 
+#[derive(Debug)]
 pub struct BreakStmt {
     span: Span,
 }

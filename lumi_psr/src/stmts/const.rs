@@ -10,6 +10,7 @@ use crate::parser::{ParseError, ParseStream};
 use crate::symbols::{Colon, Const, Equal, Ident, Semicolon};
 use crate::ty::Type;
 
+#[derive(Debug)]
 pub struct ConstType {
     span: Span,
     ty: Type,
@@ -38,6 +39,7 @@ impl Parse for Option<ConstType> {
     }
 }
 
+#[derive(Debug)]
 pub struct ConstStmt {
     span: Span,
     ident: Ident,

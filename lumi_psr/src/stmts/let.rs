@@ -10,6 +10,7 @@ use crate::parser::{ParseError, ParseStream};
 use crate::symbols::{Equal, Ident, Let, Semicolon};
 use crate::ty::Type;
 
+#[derive(Debug)]
 pub struct LetStmt {
     span: Span,
     ident: Ident,
