@@ -1,30 +1,41 @@
+use lumi_lxr::span::Span;
 use lumi_lxr::token::TokenKind;
 
 use crate::display_tree::DisplayTree;
+use crate::exprs::Expr;
 use crate::parse::Parse;
 use crate::parser::{ParseError, ParseStream};
+use crate::symbols::Semicolon;
 
 use self::block::BlockStmt;
 use self::class::ClassStmt;
 use self::expr::ExprStmt;
+use self::fun::FunStmt;
 use self::println::PrintlnStmt;
+use self::r#break::BreakStmt;
 use self::r#const::ConstStmt;
+use self::r#continue::ContinueStmt;
 use self::r#for::ForStmt;
 use self::r#if::IfStmt;
 use self::r#impl::ImplStmt;
 use self::r#let::LetStmt;
+use self::r#return::ReturnStmt;
 use self::r#trait::TraitStmt;
 use self::r#while::WhileStmt;
 
 pub mod block;
+pub mod r#break;
 pub mod class;
 pub mod r#const;
+pub mod r#continue;
 pub mod expr;
 pub mod r#for;
+pub mod fun;
 pub mod r#if;
 pub mod r#impl;
 pub mod r#let;
 pub mod println;
+pub mod r#return;
 pub mod r#trait;
 pub mod r#while;
 
@@ -40,6 +51,10 @@ pub enum Stmt {
     Trait(TraitStmt),
     Impl(ImplStmt),
     Expr(ExprStmt),
+    Fun(FunStmt),
+    Continue(ContinueStmt),
+    Break(BreakStmt),
+    Return(ReturnStmt),
 }
 
 impl Parse for Stmt {
@@ -55,7 +70,25 @@ impl Parse for Stmt {
             TokenKind::Class => Ok(Stmt::Class(input.parse()?)),
             TokenKind::Trait => Ok(Stmt::Trait(input.parse()?)),
             TokenKind::Impl => Ok(Stmt::Impl(input.parse()?)),
-            _ => Ok(Stmt::Expr(input.parse()?)),
+            TokenKind::Fun | TokenKind::Extern => Ok(Stmt::Fun(input.parse()?)),
+            TokenKind::Continue => Ok(Stmt::Continue(input.parse()?)),
+            TokenKind::Break => Ok(Stmt::Break(input.parse()?)),
+            TokenKind::Return => Ok(Stmt::Return(input.parse()?)),
+            _ => {
+                let expr: Expr = input.parse()?;
+                if input.peek().kind() == TokenKind::Semicolon {
+                    let semicolon: Semicolon = input.parse()?;
+                    Ok(Stmt::Expr(ExprStmt {
+                        span: Span::range(expr.span(), semicolon.span()),
+                        expr,
+                    }))
+                } else {
+                    Ok(Stmt::Return(ReturnStmt {
+                        span: expr.span().clone(),
+                        expr,
+                    }))
+                }
+            }
         }
     }
 }
@@ -73,7 +106,11 @@ impl DisplayTree for Stmt {
             Stmt::Class(class) => class.display(layer),
             Stmt::Trait(r#trait) => r#trait.display(layer),
             Stmt::Impl(r#impl) => r#impl.display(layer),
+            Stmt::Fun(fun) => fun.display(layer),
             Stmt::Expr(expr) => expr.display(layer),
+            Stmt::Continue(r#continue) => r#continue.display(layer),
+            Stmt::Break(r#break) => r#break.display(layer),
+            Stmt::Return(r#return) => r#return.display(layer),
         }
     }
 }

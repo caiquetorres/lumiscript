@@ -1,9 +1,9 @@
 use clap::Parser;
 use lumi_lxr::lexer::Lexer;
 use lumi_lxr::source_code::SourceCode;
+use lumi_psr::ast::Ast;
 use lumi_psr::display_tree::DisplayTree;
 use lumi_psr::parser::ParseStream;
-use lumi_psr::stmts::Stmt;
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -21,7 +21,7 @@ fn main() {
     match lexer.tokens() {
         Ok(tokens) => {
             let mut parse_stream = ParseStream::new(tokens);
-            match parse_stream.parse::<Vec<Stmt>>() {
+            match parse_stream.parse::<Ast>() {
                 Ok(ast) => ast.display(0),
                 Err(error) => eprintln!("{}", error),
             };

@@ -5,35 +5,36 @@ use crate::display_tree::{branch, DisplayTree};
 use crate::exprs::Expr;
 use crate::parse::Parse;
 use crate::parser::{ParseError, ParseStream};
-use crate::symbols::Semicolon;
+use crate::symbols::{Return, Semicolon};
 
-pub struct ExprStmt {
+pub struct ReturnStmt {
     pub(crate) span: Span,
     pub(crate) expr: Expr,
 }
 
-span!(ExprStmt);
+span!(ReturnStmt);
 
-impl ExprStmt {
+impl ReturnStmt {
     pub fn expr(&self) -> &Expr {
         &self.expr
     }
 }
 
-impl Parse for ExprStmt {
+impl Parse for ReturnStmt {
     fn parse(input: &mut ParseStream) -> Result<Self, ParseError> {
+        let r#return: Return = input.parse()?;
         let expr: Expr = input.parse()?;
         let semicolon: Semicolon = input.parse()?;
         Ok(Self {
-            span: Span::range(expr.span(), semicolon.span()),
+            span: Span::range(r#return.span(), semicolon.span()),
             expr,
         })
     }
 }
 
-impl DisplayTree for ExprStmt {
+impl DisplayTree for ReturnStmt {
     fn display(&self, layer: usize) {
-        branch("ExprStmt", layer);
+        branch("ReturnStmt", layer);
         self.expr.display(layer + 1);
     }
 }

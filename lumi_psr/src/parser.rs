@@ -17,7 +17,7 @@ impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let line = self.span.start().line();
         let column = self.span.start().column();
-        let line_content = self.source_code.code().lines().nth(line - 1).unwrap();
+        let line_content = self.source_code.code().lines().nth(line - 1).unwrap_or("");
         let output = format!(
             "\nCompile Error: {} at Line {} at Column {}\n",
             self.message, line, column,
