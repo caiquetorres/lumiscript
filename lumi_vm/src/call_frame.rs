@@ -7,7 +7,7 @@ use crate::object::Object;
 pub(crate) struct CallFrame {
     pub(crate) index: usize,
     pub(crate) start: usize,
-    pub(crate) end: usize,
+    _end: usize,
     slots: HashMap<String, Object>,
 }
 
@@ -16,13 +16,9 @@ impl CallFrame {
         Self {
             index: 0,
             start,
-            end,
+            _end: end,
             slots,
         }
-    }
-
-    fn move_ptr(&mut self, index: usize) {
-        self.index += index;
     }
 
     pub(crate) fn slots(&self) -> &HashMap<String, Object> {

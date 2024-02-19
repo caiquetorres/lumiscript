@@ -66,6 +66,21 @@ impl Emitter for Expr {
                         chunk.add_bytecode(Bytecode::Equals);
                         chunk.add_bytecode(Bytecode::Not);
                     }
+                    "=" => {
+                        binary.right().emit(chunk);
+                        let mut expr = binary.left();
+                        while let Expr::Paren(paren) = expr {
+                            expr = paren.expr();
+                        }
+                        if let Expr::Ident(ident) = expr {
+                            chunk.add_constant(Constant::Str(ident.ident().span().source_text()));
+                            chunk.add_bytecode(Bytecode::SetVar);
+                        } else if let Expr::Get(get) = expr {
+                            chunk.add_constant(Constant::Str(get.ident().span().source_text()));
+                            get.expr().emit(chunk);
+                            chunk.add_bytecode(Bytecode::SetProp);
+                        }
+                    }
                     _ => todo!(),
                 }
             }

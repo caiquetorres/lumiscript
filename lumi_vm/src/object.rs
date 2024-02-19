@@ -40,7 +40,6 @@ impl<T> FromMut<T> for *mut T {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Object {
-    Trait(*const Trait),
     Class(*const Class),
     Primitive(Primitive),
     Instance(*mut Instance),
@@ -58,26 +57,14 @@ impl Object {
     }
 }
 
-pub(crate) struct Trait {
-    name: String,
-}
-
-impl Trait {
-    pub(crate) fn new(name: &str) -> Self {
-        Self {
-            name: name.to_owned(),
-        }
-    }
-}
-
 pub(crate) struct Class {
-    name: String,
+    _name: String,
 }
 
 impl Class {
     pub(crate) fn new(name: &str) -> Self {
         Self {
-            name: name.to_owned(),
+            _name: name.to_owned(),
         }
     }
 }
@@ -106,6 +93,10 @@ impl Instance {
 
     pub fn field(&self, ident: &str) -> Option<&Object> {
         self.fields.get(ident)
+    }
+
+    pub fn set_field(&mut self, ident: &str, value: Object) {
+        self.fields.insert(ident.to_owned(), value);
     }
 }
 

@@ -19,10 +19,4 @@ impl ObjectStack {
             .pop()
             .ok_or(RuntimeError::new("Object stack underflow"))
     }
-
-    pub(crate) fn peek(&mut self) -> Result<&Object, RuntimeError> {
-        self.buffer
-            .last()
-            .ok_or(RuntimeError::new("Object stack underflow"))
-    }
 }

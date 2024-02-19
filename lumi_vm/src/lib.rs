@@ -11,7 +11,7 @@ use call_frame::{CallFrame, CallFrameStack};
 use const_stack::ConstStack;
 use lumi_bc_e::chunk::{Bytecode, Chunk, Constant};
 use obj_stack::ObjectStack;
-use object::{Class, FromMut, FromPtr, Function, Instance, Object, Primitive, Trait};
+use object::{Class, FromMut, FromPtr, Function, Instance, Object, Primitive};
 use runtime_error::RuntimeError;
 use scope::ScopeStack;
 
@@ -137,14 +137,6 @@ impl VirtualMachine {
                     let const_name = self.constant_stack.pop()?;
                     if let Constant::Str(const_name) = const_name {
                         self.scope_stack.set_symbol(&const_name, object);
-                    }
-                    self.frame_stack.move_ptr(1);
-                }
-                Bytecode::DeclareTrait => {
-                    let trait_name = self.constant_stack.pop()?;
-                    if let Constant::Str(trait_name) = trait_name {
-                        let tr = GarbageCollector::register(Trait::new(&trait_name));
-                        self.scope_stack.set_symbol(&trait_name, Object::Trait(tr));
                     }
                     self.frame_stack.move_ptr(1);
                 }
@@ -279,6 +271,27 @@ impl VirtualMachine {
                         }
                         self.call(method.function(), args, symbols)?;
                     }
+                }
+                Bytecode::SetVar => {
+                    let value = self.object_stack.pop()?;
+                    let var_name = self.constant_stack.pop()?;
+                    if let Constant::Str(var_name) = var_name {
+                        self.scope_stack.set_symbol(&var_name, value.clone());
+                    }
+                    self.object_stack.push(value);
+                    self.frame_stack.move_ptr(1);
+                }
+                Bytecode::SetProp => {
+                    let object = self.object_stack.pop()?;
+                    let value = self.object_stack.pop()?;
+                    let prop_name = self.constant_stack.pop()?;
+                    if let (Constant::Str(var_name), Object::Instance(instance)) =
+                        (prop_name, object)
+                    {
+                        let instance = instance.from_mut();
+                        instance.set_field(&var_name, value);
+                    }
+                    self.frame_stack.move_ptr(1);
                 }
                 Bytecode::Return => {
                     self.frame_stack.pop();

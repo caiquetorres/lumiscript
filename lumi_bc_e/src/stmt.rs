@@ -92,10 +92,7 @@ impl Emitter for Stmt {
                 chunk.add_constant(Constant::Str(r#const.ident().source_text()));
                 chunk.add_bytecode(Bytecode::DeclareVar);
             }
-            Self::Trait(tr) => {
-                chunk.add_constant(Constant::Str(tr.ident().span().source_text()));
-                chunk.add_bytecode(Bytecode::DeclareTrait);
-            }
+
             Self::Class(class) => {
                 chunk.add_constant(Constant::Str(class.ident().span().source_text()));
                 chunk.add_bytecode(Bytecode::DeclareClass);
@@ -113,6 +110,7 @@ impl Emitter for Stmt {
                 r#return.expr().emit(chunk);
                 chunk.add_bytecode(Bytecode::Return);
             }
+            Self::Trait(_) => {}
             _ => todo!(),
         }
     }

@@ -1,12 +1,12 @@
 #[derive(Debug)]
 pub struct RuntimeError {
-    message: String,
+    _message: String,
 }
 
 impl RuntimeError {
     pub fn new(message: &str) -> Self {
         Self {
-            message: message.to_owned(),
+            _message: message.to_owned(),
         }
     }
 }
