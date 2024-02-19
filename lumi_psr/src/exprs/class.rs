@@ -111,6 +111,14 @@ impl ClassExpr {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    pub fn cls(&self) -> &Expr {
+        self.cls.as_ref()
+    }
+
+    pub fn fields(&self) -> &Vec<Field> {
+        &self.fields
+    }
 }
 
 impl DisplayTree for ClassExpr {

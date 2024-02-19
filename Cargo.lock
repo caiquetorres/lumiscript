@@ -95,7 +95,6 @@ name = "cli"
 version = "0.1.0"
 dependencies = [
  "clap",
- "compiler",
  "lumi_bc_e",
  "lumi_core",
  "lumi_lxr",
@@ -127,6 +126,9 @@ checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 [[package]]
 name = "lumi_bc_e"
 version = "0.1.0"
+dependencies = [
+ "lumi_psr",
+]
 
 [[package]]
 name = "lumi_core"
@@ -201,8 +203,7 @@ checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 name = "virtual_machine"
 version = "0.1.0"
 dependencies = [
- "compiler",
- "lumi_core",
+ "lumi_bc_e",
 ]
 
 [[package]]

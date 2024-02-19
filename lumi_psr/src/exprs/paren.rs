@@ -24,6 +24,10 @@ impl ParenExpr {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    pub fn expr(&self) -> &Expr {
+        self.expr.as_ref()
+    }
 }
 
 impl DisplayTree for ParenExpr {

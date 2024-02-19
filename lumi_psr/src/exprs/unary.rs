@@ -54,6 +54,14 @@ impl UnaryExpr {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    pub fn op(&self) -> &UnaryOp {
+        &self.op
+    }
+
+    pub fn expr(&self) -> &Expr {
+        self.expr.as_ref()
+    }
 }
 
 impl DisplayTree for UnaryExpr {

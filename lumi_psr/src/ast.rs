@@ -10,6 +10,12 @@ pub struct Ast {
     stmts: Vec<Stmt>,
 }
 
+impl Ast {
+    pub fn stmts(&self) -> &Vec<Stmt> {
+        &self.stmts
+    }
+}
+
 impl Parse for Ast {
     fn parse(input: &mut ParseStream) -> Result<Self, ParseError> {
         if input.peek().kind() == TokenKind::Eof {

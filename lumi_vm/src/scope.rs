@@ -1,9 +1,8 @@
 use std::collections::HashMap;
-use std::collections::HashSet;
 
-use crate::obj::Obj;
-use crate::obj::ObjClass;
-use crate::obj::ObjTrait;
+use crate::object::Class;
+use crate::object::Function;
+use crate::object::Object;
 use crate::runtime_error::RuntimeError;
 
 /// The `Scope` struct is designed to serve as a container for storing
@@ -15,15 +14,13 @@ use crate::runtime_error::RuntimeError;
 /// any of its child scopes.
 #[derive(Debug, Clone)]
 struct Scope {
-    symbols: HashMap<String, Obj>,
-    traits: HashSet<(*mut ObjClass, *mut ObjTrait)>,
-    methods: HashMap<(*mut ObjClass, String), Obj>,
+    symbols: HashMap<String, Object>,
+    methods: HashMap<(*const Class, String), *const Function>,
 }
 
 impl Scope {
     fn new() -> Self {
         Self {
-            traits: HashSet::new(),
             symbols: HashMap::new(),
             methods: HashMap::new(),
         }
@@ -40,12 +37,6 @@ pub(crate) struct ScopeStack {
 }
 
 impl ScopeStack {
-    /// Constructs a new instance of the stack.
-    ///
-    /// The stack is initialized with a root scope by default.
-    ///
-    /// # Returns
-    /// A new `ScopeStack` instance with an initial root scope.
     pub(crate) fn new() -> Self {
         let root_scope = Scope::new();
         Self {
@@ -53,42 +44,22 @@ impl ScopeStack {
         }
     }
 
-    /// Adds a new empty scope to the top of the stack.
-    pub(crate) fn push(&mut self) {
+    pub(crate) fn add_scope(&mut self) {
         let scope = Scope::new();
         self.buffer.push(scope);
     }
 
-    /// Removes the top scope from the stack.
-    pub(crate) fn pop(&mut self) {
+    pub(crate) fn pop_scope(&mut self) {
         self.buffer.pop();
     }
 
-    /// Inserts a new symbol in the stack top scope.
-    ///
-    /// # Parameters
-    /// - `ident`: A string representing the identifier of the object to be
-    /// retrieved.
-    /// - `object`: The object that is being inserted.
-    pub(crate) fn insert(&mut self, ident: &str, object: Obj) {
+    pub(crate) fn set_symbol(&mut self, ident: &str, object: Object) {
         if let Some(current) = self.current_mut() {
             current.symbols.insert(ident.to_owned(), object);
         }
     }
 
-    /// Retrieves the object associated with the specified identifier by
-    /// searching through scopes from the top and moving to the previous
-    /// ones.
-    ///
-    /// # Parameters
-    /// - `ident`: A string representing the identifier of the object to be
-    /// retrieved.
-    ///
-    /// # Returns
-    /// An `Option` containing the retrieved `Object` if the identifier is
-    /// found, or `None` if the identifier is not present in any of the
-    /// scopes.
-    pub(crate) fn get(&self, ident: &str) -> Result<Obj, RuntimeError> {
+    pub(crate) fn symbol(&self, ident: &str) -> Result<Object, RuntimeError> {
         for current in self.buffer.iter().rev() {
             if let Some(obj) = current.symbols.get(ident) {
                 return Ok(obj.clone());
@@ -100,32 +71,19 @@ impl ScopeStack {
         )))
     }
 
-    pub fn set_method(&mut self, cls: *mut ObjClass, ident: &str, method: Obj) {
+    pub fn set_method(&mut self, cls: *const Class, ident: &str, method: *const Function) {
         if let Some(current) = self.current_mut() {
             current.methods.insert((cls, ident.to_owned()), method);
         }
     }
 
-    pub fn method(&self, cls: *mut ObjClass, ident: &str) -> Result<Obj, RuntimeError> {
+    pub fn method(&self, cls: *const Class, ident: &str) -> Result<*const Function, RuntimeError> {
         for current in self.buffer.iter().rev() {
             if let Some(obj) = current.methods.get(&(cls, ident.to_owned())) {
                 return Ok(obj.clone());
             }
         }
         Err(RuntimeError::new("Method not implemented for class"))
-    }
-
-    pub(crate) fn has_impl(&self, cls: *mut ObjClass, tr: *mut ObjTrait) -> bool {
-        self.buffer
-            .iter()
-            .rev()
-            .any(|scope| scope.traits.contains(&(cls, tr)))
-    }
-
-    pub(crate) fn set_impl(&mut self, cls: *mut ObjClass, tr: *mut ObjTrait) {
-        if let Some(current) = self.current_mut() {
-            current.traits.insert((cls, tr));
-        }
     }
 
     fn current_mut(&mut self) -> Option<&mut Scope> {

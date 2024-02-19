@@ -56,6 +56,18 @@ impl BinaryExpr {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    pub fn left(&self) -> &Expr {
+        self.left.as_ref()
+    }
+
+    pub fn op(&self) -> &BinaryOp {
+        &self.op
+    }
+
+    pub fn right(&self) -> &Expr {
+        self.right.as_ref()
+    }
 }
 
 impl DisplayTree for BinaryExpr {

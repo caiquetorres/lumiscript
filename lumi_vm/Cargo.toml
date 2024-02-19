@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-compiler = { path = "../lumi_c" }
-lumi_core = { path = "../lumi_core" }
+lumi_bc_e = { path = "../lumi_bc_e" }
 
 [features]

@@ -18,6 +18,12 @@ pub struct PrintlnStmt {
 
 span!(PrintlnStmt);
 
+impl PrintlnStmt {
+    pub fn expr(&self) -> &Expr {
+        &self.expr
+    }
+}
+
 impl Parse for PrintlnStmt {
     fn parse(input: &mut ParseStream) -> Result<Self, ParseError> {
         let println: Println = input.parse()?;

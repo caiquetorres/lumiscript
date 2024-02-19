@@ -3,6 +3,7 @@ use lumi_lxr::span::Span;
 use lumi_lxr::token::TokenKind;
 
 use crate::display_tree::{branch, DisplayTree};
+use crate::ident;
 use crate::parse::Parse;
 use crate::parser::{ParseError, ParseStream};
 use crate::symbols::{Colon, Ident};
@@ -16,6 +17,7 @@ pub struct Param {
 }
 
 span!(Param);
+ident!(Param);
 
 impl Parse for Param {
     fn parse(input: &mut ParseStream) -> Result<Self, ParseError> {

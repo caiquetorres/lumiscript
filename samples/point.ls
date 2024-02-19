@@ -21,29 +21,29 @@ class Point {
 
 impl Point {
     fun getX() -> Num {
-        return this.x;
+        this.x
     }
 
     fun getY() -> Num {
-        return this.y;
+        this.y
     }
 }
 
 impl Add for Point {
     fun add(other: This) -> This {
-        return This {
+        This {
             x: this.x + other.x,
             y: this.y + other.y
-        };
+        }
     }
 }
 
 impl Sub for Point {
     fun sub(other: This) -> This {
-        return This {
+        This {
             x: this.x - other.x,
             y: this.y - other.y
-        };
+        }
     }
 }
 

@@ -24,6 +24,14 @@ impl GetExpr {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    pub fn expr(&self) -> &Expr {
+        self.expr.as_ref()
+    }
+
+    pub fn ident(&self) -> &Ident {
+        &self.ident
+    }
 }
 
 impl DisplayTree for GetExpr {

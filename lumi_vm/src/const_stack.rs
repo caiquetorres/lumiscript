@@ -1,4 +1,4 @@
-use compiler::generator::constant::Constant;
+use lumi_bc_e::chunk::Constant;
 
 use crate::runtime_error::RuntimeError;
 

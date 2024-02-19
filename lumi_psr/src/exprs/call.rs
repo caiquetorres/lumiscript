@@ -59,6 +59,14 @@ impl CallExpr {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    pub fn callee(&self) -> &Expr {
+        self.callee.as_ref()
+    }
+
+    pub fn args(&self) -> &Vec<Expr> {
+        &self.args
+    }
 }
 
 impl DisplayTree for CallExpr {
