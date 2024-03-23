@@ -9,7 +9,7 @@ macro_rules! define_bytecodes {
         impl Bytecode {
             pub fn from_byte(byte: u8) -> Bytecode {
                 match byte {
-                    $(x if x == Bytecode::$name as u8 => Bytecode::$name,)*
+                    $(bytecode if bytecode == Bytecode::$name as u8 => Bytecode::$name,)*
                     _ => unreachable!(),
                 }
             }
@@ -44,7 +44,8 @@ define_bytecodes!(
     Equals,
     Greater,
     Less,
-    If,
+    JumpIfFalse,
+    Jump,
     Else,
     While,
     Return,

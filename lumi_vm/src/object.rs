@@ -79,6 +79,10 @@ impl Primitive {
     pub(crate) fn new(class: *const Class, value: f64) -> Self {
         Self { class, value }
     }
+
+    pub(crate) fn value(&self) -> f64 {
+        self.value
+    }
 }
 
 pub(crate) struct Instance {

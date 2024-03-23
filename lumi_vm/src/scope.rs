@@ -71,6 +71,18 @@ impl ScopeStack {
         )))
     }
 
+    pub(crate) fn symbol_mut(&mut self, ident: &str) -> Result<&mut Object, RuntimeError> {
+        for current in self.buffer.iter_mut().rev() {
+            if let Some(obj) = current.symbols.get_mut(ident) {
+                return Ok(obj);
+            }
+        }
+        Err(RuntimeError::new(&format!(
+            "Identifier '{}' not found",
+            ident
+        )))
+    }
+
     pub fn set_method(&mut self, cls: *const Class, ident: &str, method: *const Function) {
         if let Some(current) = self.current_mut() {
             current.methods.insert((cls, ident.to_owned()), method);

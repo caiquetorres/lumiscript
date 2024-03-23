@@ -86,7 +86,7 @@ impl Parse for Stmt {
                 } else {
                     Ok(Stmt::Return(ReturnStmt {
                         span: expr.span().clone(),
-                        expr,
+                        expr: Some(expr),
                     }))
                 }
             }

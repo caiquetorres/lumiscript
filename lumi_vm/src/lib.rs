@@ -276,7 +276,8 @@ impl VirtualMachine {
                     let value = self.object_stack.pop()?;
                     let var_name = self.constant_stack.pop()?;
                     if let Constant::Str(var_name) = var_name {
-                        self.scope_stack.set_symbol(&var_name, value.clone());
+                        let object = self.scope_stack.symbol_mut(&var_name)?;
+                        *object = value.clone();
                     }
                     self.object_stack.push(value);
                     self.frame_stack.move_ptr(1);
@@ -293,11 +294,64 @@ impl VirtualMachine {
                     }
                     self.frame_stack.move_ptr(1);
                 }
-                Bytecode::Return => {
-                    self.frame_stack.pop();
+                Bytecode::JumpIfFalse => {
+                    let offset = self.constant_stack.pop()?;
+                    let object = self.object_stack.pop()?;
+                    if let Object::Primitive(primitive) = object {
+                        if primitive.value() == 0.0 {
+                            if let Constant::Size(offset) = offset {
+                                self.frame_stack.move_ptr(offset + 1);
+                            }
+                        } else {
+                            self.frame_stack.move_ptr(1);
+                        }
+                    }
+                }
+                Bytecode::Add => {
+                    let operand1 = self.object_stack.pop()?;
+                    let operand2 = self.object_stack.pop()?;
+                    if let (Object::Primitive(prim1), Object::Primitive(prim2)) =
+                        (operand1, operand2)
+                    {
+                        let object = Object::Primitive(Primitive::new(
+                            num_class_ptr,
+                            prim1.value() + prim2.value(),
+                        ));
+                        self.object_stack.push(object);
+                        self.frame_stack.move_ptr(1);
+                    }
+                }
+                Bytecode::Subtract => {
+                    let operand1 = self.object_stack.pop()?;
+                    let operand2 = self.object_stack.pop()?;
+                    if let (Object::Primitive(prim1), Object::Primitive(prim2)) =
+                        (operand1, operand2)
+                    {
+                        let object = Object::Primitive(Primitive::new(
+                            num_class_ptr,
+                            prim1.value() - prim2.value(),
+                        ));
+                        self.object_stack.push(object);
+                        self.frame_stack.move_ptr(1);
+                    }
+                }
+                Bytecode::Equals => {
+                    let operand1 = self.object_stack.pop()?;
+                    let operand2 = self.object_stack.pop()?;
+                    let object = Object::Primitive(Primitive::new(
+                        bool_class_ptr,
+                        if operand1 == operand2 { 1.0 } else { 0.0 },
+                    ));
+                    self.object_stack.push(object);
                     self.frame_stack.move_ptr(1);
                 }
-                _ => {
+                Bytecode::Return => {
+                    self.frame_stack.pop();
+                    self.scope_stack.pop_scope();
+                    self.frame_stack.move_ptr(1);
+                }
+                other => {
+                    println!("Bad bytecode {:?}", other);
                     self.frame_stack.move_ptr(1);
                 }
             };

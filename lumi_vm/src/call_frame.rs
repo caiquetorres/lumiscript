@@ -40,9 +40,9 @@ impl CallFrameStack {
         self.frames.last()
     }
 
-    pub(crate) fn move_ptr(&mut self, index: usize) {
+    pub(crate) fn move_ptr(&mut self, offset: usize) {
         if let Some(frame) = self.frames.last_mut() {
-            frame.index += index;
+            frame.index += offset;
         }
     }
 

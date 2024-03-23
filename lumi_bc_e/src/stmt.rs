@@ -17,7 +17,7 @@ impl Emitter for Method {
             }
             chunk.add_constant(Constant::Size(self.params().len()));
             chunk.add_constant(Constant::Str(self.ident().span().source_text()));
-            chunk.add_bytecode(Bytecode::DeclareMethod); // Declare method?
+            chunk.add_bytecode(Bytecode::DeclareMethod);
             let s = chunk.len();
             chunk.add_bytecode(Bytecode::BeginScope);
             for stmt in block.stmts() {
@@ -47,12 +47,14 @@ impl Emitter for FunStmt {
             }
             chunk.add_constant(Constant::Size(self.params().len()));
             chunk.add_constant(Constant::Str(self.ident().span().source_text()));
-            chunk.add_bytecode(Bytecode::DeclareFun); // Declare method?
+            chunk.add_bytecode(Bytecode::DeclareFun);
             let s = chunk.len();
             chunk.add_bytecode(Bytecode::BeginScope);
             for stmt in block.stmts() {
                 stmt.emit(chunk);
             }
+            chunk.add_constant(Constant::Nil);
+            chunk.add_bytecode(Bytecode::ConvertConst);
             chunk.add_bytecode(Bytecode::Return);
             let e = chunk.len();
             if let Some(constant) = chunk.constant_mut(start) {
@@ -106,8 +108,30 @@ impl Emitter for Stmt {
             Self::Fun(fun) => {
                 fun.emit(chunk);
             }
+            Self::If(r#if) => {
+                r#if.cond().emit(chunk);
+                let then_jump = chunk.len();
+                chunk.add_constant(Constant::Size(usize::MAX));
+                chunk.add_bytecode(Bytecode::JumpIfFalse);
+                let start = chunk.len();
+                chunk.add_bytecode(Bytecode::BeginScope);
+                for stmt in r#if.stmts() {
+                    stmt.emit(chunk);
+                }
+                chunk.add_bytecode(Bytecode::EndScope);
+                let end = chunk.len();
+                let offset = end - start;
+                if let Some(constant) = chunk.constant_mut(then_jump) {
+                    *constant = Constant::Size(offset);
+                }
+            }
             Self::Return(r#return) => {
-                r#return.expr().emit(chunk);
+                if let Some(expr) = r#return.expr() {
+                    expr.emit(chunk);
+                } else {
+                    chunk.add_constant(Constant::Nil);
+                    chunk.add_bytecode(Bytecode::ConvertConst);
+                }
                 chunk.add_bytecode(Bytecode::Return);
             }
             Self::Trait(_) => {}
