@@ -1,104 +1,104 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
-use crate::object::Class;
-use crate::object::Function;
-use crate::object::Object;
+use crate::object::{Class, Function, Object};
 use crate::runtime_error::RuntimeError;
 
-/// The `Scope` struct is designed to serve as a container for storing
-/// symbols actively in use within a specific scope. This allows for the
-/// creation of references to these symbols.
-
-/// For instance, when a variable like `x` is declared and needs to be
-/// inserted into the scope, it becomes accessible within that scope and
-/// any of its child scopes.
-#[derive(Debug, Clone)]
-struct Scope {
+#[derive(Debug)]
+struct InnerScope {
     symbols: HashMap<String, Object>,
     methods: HashMap<(*const Class, String), *const Function>,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct Scope {
+    pub(crate) parent: Option<Rc<Scope>>,
+    inner: Rc<RefCell<InnerScope>>,
+}
+
 impl Scope {
-    fn new() -> Self {
+    pub(crate) fn root() -> Self {
         Self {
-            symbols: HashMap::new(),
-            methods: HashMap::new(),
-        }
-    }
-}
-
-/// The `ScopeStack` struct represents a stack of scopes, allowing for
-/// hierarchical organization of symbol scopes. It is designed to manage
-/// the nesting of scopes, enabling storage and retrieval of
-/// symbols within different levels of scope.
-#[derive(Debug)]
-pub(crate) struct ScopeStack {
-    buffer: Vec<Scope>,
-}
-
-impl ScopeStack {
-    pub(crate) fn new() -> Self {
-        let root_scope = Scope::new();
-        Self {
-            buffer: vec![root_scope],
+            parent: None,
+            inner: Rc::new(RefCell::new(InnerScope {
+                symbols: HashMap::new(),
+                methods: HashMap::new(),
+            })),
         }
     }
 
-    pub(crate) fn add_scope(&mut self) {
-        let scope = Scope::new();
-        self.buffer.push(scope);
+    pub(crate) fn new(parent: Rc<Scope>) -> Self {
+        Self {
+            parent: Some(parent),
+            inner: Rc::new(RefCell::new(InnerScope {
+                symbols: HashMap::new(),
+                methods: HashMap::new(),
+            })),
+        }
     }
 
-    pub(crate) fn pop_scope(&mut self) {
-        self.buffer.pop();
+    pub(crate) fn set_symbol(&self, ident: &str, object: Object) {
+        self.inner
+            .borrow_mut()
+            .symbols
+            .insert(ident.to_owned(), object);
     }
 
-    pub(crate) fn set_symbol(&mut self, ident: &str, object: Object) {
-        if let Some(current) = self.current_mut() {
-            current.symbols.insert(ident.to_owned(), object);
+    pub(crate) fn assign_symbol(&self, ident: &str, object: Object) -> Result<(), RuntimeError> {
+        if let Some(symbol) = self.inner.borrow_mut().symbols.get_mut(ident) {
+            *symbol = object;
+            Ok(())
+        } else {
+            if let Some(parent) = &self.parent {
+                parent.assign_symbol(ident, object)
+            } else {
+                Err(RuntimeError::new(&format!(
+                    "Identifier '{}' not found",
+                    ident
+                )))
+            }
         }
     }
 
     pub(crate) fn symbol(&self, ident: &str) -> Result<Object, RuntimeError> {
-        for current in self.buffer.iter().rev() {
-            if let Some(obj) = current.symbols.get(ident) {
-                return Ok(obj.clone());
+        if let Some(value) = self.inner.borrow().symbols.get(ident) {
+            Ok(value.clone())
+        } else {
+            if let Some(parent) = &self.parent {
+                parent.symbol(ident)
+            } else {
+                Err(RuntimeError::new(&format!(
+                    "Identifier '{}' not found",
+                    ident
+                )))
             }
         }
-        Err(RuntimeError::new(&format!(
-            "Identifier '{}' not found",
-            ident
-        )))
     }
 
-    pub(crate) fn symbol_mut(&mut self, ident: &str) -> Result<&mut Object, RuntimeError> {
-        for current in self.buffer.iter_mut().rev() {
-            if let Some(obj) = current.symbols.get_mut(ident) {
-                return Ok(obj);
+    pub(crate) fn set_method(&self, cls: *const Class, ident: &str, method: *const Function) {
+        self.inner
+            .borrow_mut()
+            .methods
+            .insert((cls, ident.to_owned()), method);
+    }
+
+    pub(crate) fn method(
+        &self,
+        cls: *const Class,
+        ident: &str,
+    ) -> Result<*const Function, RuntimeError> {
+        if let Some(value) = self.inner.borrow().methods.get(&(cls, ident.to_owned())) {
+            Ok(value.clone())
+        } else {
+            if let Some(parent) = &self.parent {
+                parent.method(cls, ident)
+            } else {
+                Err(RuntimeError::new(&format!(
+                    "Identifier '{}' not found",
+                    ident
+                )))
             }
         }
-        Err(RuntimeError::new(&format!(
-            "Identifier '{}' not found",
-            ident
-        )))
-    }
-
-    pub fn set_method(&mut self, cls: *const Class, ident: &str, method: *const Function) {
-        if let Some(current) = self.current_mut() {
-            current.methods.insert((cls, ident.to_owned()), method);
-        }
-    }
-
-    pub fn method(&self, cls: *const Class, ident: &str) -> Result<*const Function, RuntimeError> {
-        for current in self.buffer.iter().rev() {
-            if let Some(obj) = current.methods.get(&(cls, ident.to_owned())) {
-                return Ok(obj.clone());
-            }
-        }
-        Err(RuntimeError::new("Method not implemented for class"))
-    }
-
-    fn current_mut(&mut self) -> Option<&mut Scope> {
-        self.buffer.last_mut()
     }
 }

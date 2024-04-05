@@ -81,6 +81,14 @@ impl Chunk {
         }
     }
 
+    pub fn size(&self) -> f32 {
+        (std::mem::size_of::<Vec<u8>>()
+            + self.buffer.capacity() * std::mem::size_of::<u8>()
+            + std::mem::size_of::<Vec<Constant>>()
+            + self.buffer.capacity() * std::mem::size_of::<Constant>()) as f32
+            / 1024.0
+    }
+
     pub fn len(&self) -> usize {
         self.buffer.len()
     }

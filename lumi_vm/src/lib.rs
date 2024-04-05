@@ -5,7 +5,7 @@ mod object;
 mod runtime_error;
 mod scope;
 
-use std::{collections::HashMap, time::Instant};
+use std::{collections::HashMap, rc::Rc, time::Instant};
 
 use call_frame::{CallFrame, CallFrameStack};
 use const_stack::ConstStack;
@@ -13,7 +13,7 @@ use lumi_bc_e::chunk::{Bytecode, Chunk, Constant};
 use obj_stack::ObjectStack;
 use object::{Class, FromMut, FromPtr, Function, Instance, Object, Primitive};
 use runtime_error::RuntimeError;
-use scope::ScopeStack;
+use scope::Scope;
 
 use crate::object::Method;
 
@@ -29,7 +29,6 @@ impl GarbageCollector {
 }
 
 pub struct VirtualMachine {
-    scope_stack: ScopeStack,
     constant_stack: ConstStack,
     object_stack: ObjectStack,
     frame_stack: CallFrameStack,
@@ -38,7 +37,6 @@ pub struct VirtualMachine {
 impl VirtualMachine {
     pub fn new() -> Self {
         Self {
-            scope_stack: ScopeStack::new(),
             constant_stack: ConstStack::new(),
             object_stack: ObjectStack::new(),
             frame_stack: CallFrameStack::new(),
@@ -46,24 +44,28 @@ impl VirtualMachine {
     }
 
     pub fn run(&mut self, chunk: Chunk) -> Result<(), RuntimeError> {
+        println!("Chunk size: {:.2} kB\n", chunk.size());
         let nil_class_ptr = GarbageCollector::register(Class::new("Nil"));
         let num_class_ptr = GarbageCollector::register(Class::new("Num"));
         let bool_class_ptr = GarbageCollector::register(Class::new("Bool"));
-        self.frame_stack
-            .push(CallFrame::new(0, chunk.len() - 1, HashMap::new()));
         let start_time = Instant::now();
         let native_clock = Function::native("clock", &vec![], move |_| {
             let end_time = Instant::now();
             let elapsed_time = (end_time - start_time).as_millis() as f64;
-            Ok(Object::Primitive(Primitive::new(
-                num_class_ptr,
-                elapsed_time,
-            )))
+            let n_ptr = GarbageCollector::register(Primitive::new(num_class_ptr, elapsed_time));
+            Ok(Object::Primitive(n_ptr))
         });
-        self.scope_stack.set_symbol(
+        let mut cur_scope = Rc::new(Scope::root());
+        cur_scope.set_symbol(
             &native_clock.name(),
             Object::Function(GarbageCollector::register(native_clock)),
         );
+        self.frame_stack.push(CallFrame::new(
+            cur_scope.clone(),
+            0,
+            chunk.len() - 1,
+            HashMap::new(),
+        ));
         while let (Some(frame), Some(bytecode)) = (
             self.frame_stack.current(),
             self.frame_stack
@@ -80,18 +82,23 @@ impl VirtualMachine {
                     let constant = self.constant_stack.pop()?;
                     match constant {
                         Constant::Nil => {
-                            let object = Object::Primitive(Primitive::new(nil_class_ptr, 0.0));
+                            let nil_ptr =
+                                GarbageCollector::register(Primitive::new(nil_class_ptr, 0.0));
+                            let object = Object::Primitive(nil_ptr);
                             self.object_stack.push(object);
                         }
                         Constant::Bool(b) => {
-                            let object = Object::Primitive(Primitive::new(
+                            let bool_ptr = GarbageCollector::register(Primitive::new(
                                 bool_class_ptr,
                                 if b { 1.0 } else { 0.0 },
                             ));
+                            let object = Object::Primitive(bool_ptr);
                             self.object_stack.push(object);
                         }
                         Constant::Float(num) => {
-                            let object = Object::Primitive(Primitive::new(num_class_ptr, num));
+                            let n_ptr =
+                                GarbageCollector::register(Primitive::new(num_class_ptr, num));
+                            let object = Object::Primitive(n_ptr);
                             self.object_stack.push(object);
                         }
                         _ => todo!("Strings"),
@@ -121,14 +128,23 @@ impl VirtualMachine {
                 }
                 Bytecode::Println => {
                     let object = self.object_stack.pop()?;
-                    println!("{:?}", object);
+                    match object {
+                        Object::Primitive(prim) => {
+                            println!("{:?}", prim.from_ptr().value());
+                        }
+                        Object::Instance(inst) => {
+                            let i = inst.from_mut();
+                            println!("<instance {}>", i.class().name());
+                        }
+                        _ => {}
+                    }
                     self.frame_stack.move_ptr(1);
                 }
                 Bytecode::DeclareVar => {
                     let object = self.object_stack.pop()?;
                     let var_name = self.constant_stack.pop()?;
                     if let Constant::Str(var_name) = var_name {
-                        self.scope_stack.set_symbol(&var_name, object);
+                        cur_scope.set_symbol(&var_name, object);
                     }
                     self.frame_stack.move_ptr(1);
                 }
@@ -136,7 +152,7 @@ impl VirtualMachine {
                     let object = self.object_stack.pop()?;
                     let const_name = self.constant_stack.pop()?;
                     if let Constant::Str(const_name) = const_name {
-                        self.scope_stack.set_symbol(&const_name, object);
+                        cur_scope.set_symbol(&const_name, object);
                     }
                     self.frame_stack.move_ptr(1);
                 }
@@ -144,7 +160,7 @@ impl VirtualMachine {
                     let class_name = self.constant_stack.pop()?;
                     if let Constant::Str(class_name) = class_name {
                         let tr = GarbageCollector::register(Class::new(&class_name));
-                        self.scope_stack.set_symbol(&class_name, Object::Class(tr));
+                        cur_scope.set_symbol(&class_name, Object::Class(tr));
                     }
                     self.frame_stack.move_ptr(1);
                 }
@@ -166,10 +182,13 @@ impl VirtualMachine {
                         (fun_name, start, end)
                     {
                         let fun = GarbageCollector::register(Function::default(
-                            &fun_name, start, end, &params,
+                            cur_scope.clone(),
+                            &fun_name,
+                            start,
+                            end,
+                            &params,
                         ));
-                        self.scope_stack
-                            .set_symbol(&fun_name, Object::Function(fun));
+                        cur_scope.set_symbol(&fun_name, Object::Function(fun));
                         self.frame_stack.set_ptr(end);
                     }
                 }
@@ -196,33 +215,34 @@ impl VirtualMachine {
                     ) = (class_name, method_name, start, end)
                     {
                         let method = GarbageCollector::register(Function::default(
+                            cur_scope.clone(),
                             &method_name,
                             start,
                             end,
                             &params,
                         ));
-                        let class = self.scope_stack.symbol(&class_name)?;
+                        let class = cur_scope.symbol(&class_name)?;
                         if let Object::Class(class_ptr) = class {
-                            self.scope_stack.set_method(class_ptr, &method_name, method);
+                            cur_scope.set_method(class_ptr, &method_name, method);
                         }
                         self.frame_stack.set_ptr(end);
                     }
                 }
                 Bytecode::BeginScope => {
-                    self.scope_stack.add_scope();
+                    cur_scope = Rc::new(Scope::new(cur_scope));
                     for (key, object) in frame.slots() {
-                        self.scope_stack.set_symbol(key, object.clone());
+                        cur_scope.set_symbol(key, object.clone());
                     }
                     self.frame_stack.move_ptr(1);
                 }
                 Bytecode::EndScope => {
-                    self.scope_stack.pop_scope();
+                    cur_scope = cur_scope.parent.as_ref().unwrap().clone();
                     self.frame_stack.move_ptr(1);
                 }
                 Bytecode::GetSymbol => {
                     let symbol_name = self.constant_stack.pop()?;
                     if let Constant::Str(symbol_name) = symbol_name {
-                        let object = self.scope_stack.symbol(&symbol_name)?;
+                        let object = cur_scope.symbol(&symbol_name)?;
                         self.object_stack.push(object);
                     }
                     self.frame_stack.move_ptr(1);
@@ -234,7 +254,7 @@ impl VirtualMachine {
                         if let (Constant::Str(prop_name), Object::Instance(instance)) =
                             (prop_name, prop_value.clone())
                         {
-                            if let Ok(method) = self.scope_stack.method(class_ptr, &prop_name) {
+                            if let Ok(method) = cur_scope.method(class_ptr, &prop_name) {
                                 let method_ptr =
                                     GarbageCollector::register(Method::new(prop_value, method));
                                 self.object_stack.push(Object::Method(method_ptr));
@@ -261,7 +281,11 @@ impl VirtualMachine {
                     }
                     let callee = self.object_stack.pop()?;
                     if let Object::Function(function) = callee {
-                        self.call(function.from_ptr(), args, HashMap::new())?;
+                        let function = function.from_ptr();
+                        self.call(cur_scope.clone(), function, args, HashMap::new())?;
+                        if let Function::Default { scope, .. } = function {
+                            cur_scope = scope.clone()
+                        }
                     } else if let Object::Method(method) = callee {
                         let method = method.from_ptr();
                         let mut symbols = HashMap::new();
@@ -269,15 +293,17 @@ impl VirtualMachine {
                         if let Some(class_ptr) = method.this().class_ptr() {
                             symbols.insert("This".to_owned(), Object::Class(class_ptr));
                         }
-                        self.call(method.function(), args, symbols)?;
+                        self.call(cur_scope.clone(), method.function(), args, symbols)?;
+                        if let Function::Default { scope, .. } = method.function() {
+                            cur_scope = scope.clone()
+                        }
                     }
                 }
                 Bytecode::SetVar => {
                     let value = self.object_stack.pop()?;
                     let var_name = self.constant_stack.pop()?;
                     if let Constant::Str(var_name) = var_name {
-                        let object = self.scope_stack.symbol_mut(&var_name)?;
-                        *object = value.clone();
+                        cur_scope.assign_symbol(&var_name, value.clone())?;
                     }
                     self.object_stack.push(value);
                     self.frame_stack.move_ptr(1);
@@ -298,7 +324,7 @@ impl VirtualMachine {
                     let offset = self.constant_stack.pop()?;
                     let object = self.object_stack.pop()?;
                     if let Object::Primitive(primitive) = object {
-                        if primitive.value() == 0.0 {
+                        if primitive.from_ptr().value() == 0.0 {
                             if let Constant::Size(offset) = offset {
                                 self.frame_stack.move_ptr(offset + 1);
                             }
@@ -308,46 +334,57 @@ impl VirtualMachine {
                     }
                 }
                 Bytecode::Add => {
-                    let operand1 = self.object_stack.pop()?;
                     let operand2 = self.object_stack.pop()?;
+                    let operand1 = self.object_stack.pop()?;
                     if let (Object::Primitive(prim1), Object::Primitive(prim2)) =
                         (operand1, operand2)
                     {
-                        let object = Object::Primitive(Primitive::new(
+                        let n_ptr = GarbageCollector::register(Primitive::new(
                             num_class_ptr,
-                            prim1.value() + prim2.value(),
+                            prim1.from_ptr().value() + prim2.from_ptr().value(),
                         ));
+                        let object = Object::Primitive(n_ptr);
                         self.object_stack.push(object);
                         self.frame_stack.move_ptr(1);
                     }
                 }
                 Bytecode::Subtract => {
-                    let operand1 = self.object_stack.pop()?;
                     let operand2 = self.object_stack.pop()?;
+                    let operand1 = self.object_stack.pop()?;
                     if let (Object::Primitive(prim1), Object::Primitive(prim2)) =
                         (operand1, operand2)
                     {
-                        let object = Object::Primitive(Primitive::new(
+                        let n_ptr = GarbageCollector::register(Primitive::new(
                             num_class_ptr,
-                            prim1.value() - prim2.value(),
+                            prim1.from_ptr().value() - prim2.from_ptr().value(),
                         ));
+                        let object = Object::Primitive(n_ptr);
                         self.object_stack.push(object);
                         self.frame_stack.move_ptr(1);
                     }
                 }
                 Bytecode::Equals => {
-                    let operand1 = self.object_stack.pop()?;
                     let operand2 = self.object_stack.pop()?;
-                    let object = Object::Primitive(Primitive::new(
-                        bool_class_ptr,
-                        if operand1 == operand2 { 1.0 } else { 0.0 },
-                    ));
-                    self.object_stack.push(object);
-                    self.frame_stack.move_ptr(1);
+                    let operand1 = self.object_stack.pop()?;
+                    if let (Object::Primitive(operand1), Object::Primitive(operand2)) =
+                        (operand1, operand2)
+                    {
+                        let bool_ptr = GarbageCollector::register(Primitive::new(
+                            bool_class_ptr,
+                            if operand1.from_ptr().value() == operand2.from_ptr().value() {
+                                1.0
+                            } else {
+                                0.0
+                            },
+                        ));
+                        let object = Object::Primitive(bool_ptr);
+                        self.object_stack.push(object);
+                        self.frame_stack.move_ptr(1);
+                    }
                 }
                 Bytecode::Return => {
+                    cur_scope = self.frame_stack.current().unwrap().root_scope.clone();
                     self.frame_stack.pop();
-                    self.scope_stack.pop_scope();
                     self.frame_stack.move_ptr(1);
                 }
                 other => {
@@ -361,6 +398,7 @@ impl VirtualMachine {
 
     fn call(
         &mut self,
+        scope: Rc<Scope>,
         function: &Function,
         args: Vec<Object>,
         symbols: HashMap<String, Object>,
@@ -371,7 +409,7 @@ impl VirtualMachine {
         }
         match function {
             Function::Default { start, end, .. } => {
-                let frame = CallFrame::new(*start, *end, symbols);
+                let frame = CallFrame::new(scope, *start, *end, symbols);
                 self.frame_stack.push(frame);
             }
             Function::Native { fun, .. } => {

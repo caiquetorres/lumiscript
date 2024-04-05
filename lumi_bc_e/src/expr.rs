@@ -54,8 +54,8 @@ impl Emitter for Expr {
                 }
             }
             Self::Binary(binary) => {
-                binary.right().emit(chunk);
                 binary.left().emit(chunk);
+                binary.right().emit(chunk);
                 match &binary.op().source_text()[..] {
                     "+" => chunk.add_bytecode(Bytecode::Add),
                     "-" => chunk.add_bytecode(Bytecode::Subtract),

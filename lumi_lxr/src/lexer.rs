@@ -88,17 +88,17 @@ impl Lexer {
     fn peek(&self) -> char {
         self.source_code
             .code()
-            .chars()
+            .bytes()
             .nth(self.cur_index())
-            .unwrap_or('\0')
+            .unwrap_or(b'\0') as char
     }
 
     fn peek2(&self) -> char {
         self.source_code
             .code()
-            .chars()
+            .bytes()
             .nth(self.cur_index() + 1)
-            .unwrap_or('\0')
+            .unwrap_or(b'\0') as char
     }
 
     fn skip_whitespace(&mut self) {
@@ -332,6 +332,7 @@ impl Lexer {
                             "println" => TokenKind::Println,
                             _ => TokenKind::Ident,
                         };
+
                         Some(self.create_token(kind, start, end))
                     } else {
                         self.next_index();

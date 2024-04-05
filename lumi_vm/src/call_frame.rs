@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
-use crate::object::Object;
+use crate::{object::Object, scope::Scope};
 
 /// Represents a call frame used in the execution of the virtual machine.
 #[derive(Debug)]
 pub(crate) struct CallFrame {
+    pub(crate) root_scope: Rc<Scope>,
     pub(crate) index: usize,
     pub(crate) start: usize,
     _end: usize,
@@ -12,8 +13,14 @@ pub(crate) struct CallFrame {
 }
 
 impl CallFrame {
-    pub(crate) fn new(start: usize, end: usize, slots: HashMap<String, Object>) -> Self {
+    pub(crate) fn new(
+        scope: Rc<Scope>,
+        start: usize,
+        end: usize,
+        slots: HashMap<String, Object>,
+    ) -> Self {
         Self {
+            root_scope: scope,
             index: 0,
             start,
             _end: end,

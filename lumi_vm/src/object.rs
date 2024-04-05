@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
-use crate::runtime_error::RuntimeError;
+use crate::{runtime_error::RuntimeError, scope::Scope};
 
 pub(crate) trait FromPtr<T> {
     fn from_ptr(&self) -> &T;
@@ -41,7 +41,7 @@ impl<T> FromMut<T> for *mut T {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Object {
     Class(*const Class),
-    Primitive(Primitive),
+    Primitive(*const Primitive),
     Instance(*mut Instance),
     Function(*const Function),
     Method(*const Method),
@@ -51,21 +51,25 @@ impl Object {
     pub(crate) fn class_ptr(&self) -> Option<*const Class> {
         match self {
             Self::Instance(instance) => Some(instance.from_mut().class),
-            Self::Primitive(primitive) => Some(primitive.class),
+            Self::Primitive(primitive) => Some(primitive.from_ptr().class),
             _ => None,
         }
     }
 }
 
 pub(crate) struct Class {
-    _name: String,
+    name: String,
 }
 
 impl Class {
     pub(crate) fn new(name: &str) -> Self {
         Self {
-            _name: name.to_owned(),
+            name: name.to_owned(),
         }
+    }
+
+    pub(crate) fn name(&self) -> String {
+        self.name.clone()
     }
 }
 
@@ -85,6 +89,7 @@ impl Primitive {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Instance {
     class: *const Class,
     fields: HashMap<String, Object>,
@@ -93,6 +98,10 @@ pub(crate) struct Instance {
 impl Instance {
     pub fn new(class: *const Class, fields: HashMap<String, Object>) -> Self {
         Self { class, fields }
+    }
+
+    pub fn class(&self) -> &Class {
+        self.class.from_ptr()
     }
 
     pub fn field(&self, ident: &str) -> Option<&Object> {
@@ -125,6 +134,7 @@ impl Method {
 
 pub(crate) enum Function {
     Default {
+        scope: Rc<Scope>,
         name: String,
         params: Vec<String>,
         start: usize,
@@ -138,8 +148,15 @@ pub(crate) enum Function {
 }
 
 impl Function {
-    pub(crate) fn default(name: &str, start: usize, end: usize, params: &[String]) -> Self {
+    pub(crate) fn default(
+        scope: Rc<Scope>,
+        name: &str,
+        start: usize,
+        end: usize,
+        params: &[String],
+    ) -> Self {
         Self::Default {
+            scope,
             name: name.to_owned(),
             params: params.to_vec(),
             start,
