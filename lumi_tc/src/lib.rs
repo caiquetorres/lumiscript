@@ -1,4 +1,4 @@
-use compiler::syntax::ast::Ast;
+use lumi_psr::ast::Ast;
 
 pub struct TypeChecker;
 

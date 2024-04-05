@@ -96,11 +96,10 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "lumi_bc_e",
- "lumi_core",
  "lumi_lxr",
  "lumi_psr",
- "type_checker",
- "virtual_machine",
+ "lumi_tc",
+ "lumi_vm",
 ]
 
 [[package]]
@@ -108,14 +107,6 @@ name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
-
-[[package]]
-name = "compiler"
-version = "0.1.0"
-dependencies = [
- "lumi_core",
- "lumi_lxr",
-]
 
 [[package]]
 name = "heck"
@@ -131,10 +122,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lumi_core"
-version = "0.1.0"
-
-[[package]]
 name = "lumi_lxr"
 version = "0.1.0"
 
@@ -143,6 +130,20 @@ name = "lumi_psr"
 version = "0.1.0"
 dependencies = [
  "lumi_lxr",
+]
+
+[[package]]
+name = "lumi_tc"
+version = "0.1.0"
+dependencies = [
+ "lumi_psr",
+]
+
+[[package]]
+name = "lumi_vm"
+version = "0.1.0"
+dependencies = [
+ "lumi_bc_e",
 ]
 
 [[package]]
@@ -181,13 +182,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "type_checker"
-version = "0.1.0"
-dependencies = [
- "compiler",
-]
-
-[[package]]
 name = "unicode-ident"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -198,13 +192,6 @@ name = "utf8parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
-
-[[package]]
-name = "virtual_machine"
-version = "0.1.0"
-dependencies = [
- "lumi_bc_e",
-]
 
 [[package]]
 name = "windows-sys"

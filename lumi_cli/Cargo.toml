@@ -7,9 +7,8 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.4.18", features = ["derive"] }
-type_checker = { path = "../lumi_tc" }
-lumi_core = { path = "../lumi_core" }
+lumi_tc = { path = "../lumi_tc" }
 lumi_lxr = { path = "../lumi_lxr" }
 lumi_psr = { path = "../lumi_psr" }
 lumi_bc_e = { path = "../lumi_bc_e" }
-virtual_machine = { path = "../lumi_vm" }
+lumi_vm = { path = "../lumi_vm" }

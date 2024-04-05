@@ -5,7 +5,7 @@ use lumi_lxr::source_code::SourceCode;
 use lumi_psr::ast::Ast;
 use lumi_psr::display_tree::DisplayTree;
 use lumi_psr::parser::ParseStream;
-use virtual_machine::VirtualMachine;
+use lumi_vm::VirtualMachine;
 
 #[derive(Parser, Debug)]
 #[command()]
