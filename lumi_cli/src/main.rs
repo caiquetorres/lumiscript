@@ -33,9 +33,10 @@ fn main() {
                         "Compilation time: {} milliseconds",
                         (Instant::now() - start_compilation_time).as_millis()
                     );
-                    println!("\n{:?}\n", chunk);
+                    println!("Chunk size: {:.2} kB\n", chunk.size());
                     let mut vm = VirtualMachine::new();
                     let start_execution_time = Instant::now();
+                    println!("Output:");
                     if let Ok(_) = vm.run(chunk) {
                         println!(
                             "\nExecution time: {} milliseconds",

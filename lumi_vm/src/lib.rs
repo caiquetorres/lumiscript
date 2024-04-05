@@ -44,7 +44,6 @@ impl VirtualMachine {
     }
 
     pub fn run(&mut self, chunk: Chunk) -> Result<(), RuntimeError> {
-        println!("Chunk size: {:.2} kB\n", chunk.size());
         let nil_class_ptr = GarbageCollector::register(Class::new("Nil"));
         let num_class_ptr = GarbageCollector::register(Class::new("Num"));
         let bool_class_ptr = GarbageCollector::register(Class::new("Bool"));
