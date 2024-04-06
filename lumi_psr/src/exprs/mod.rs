@@ -205,7 +205,6 @@ fn primary(input: &mut ParseStream) -> Result<Expr, ParseError> {
         _ => Err(ParseError {
             message: "Expression expected".to_owned(),
             span: input.peek().span().clone(),
-            source_code: input.peek().span().source_code().clone(),
         }),
     }
 }

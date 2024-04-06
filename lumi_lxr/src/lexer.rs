@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use colored::Colorize;
+
 use crate::token::{Token, TokenKind};
 use crate::token_stream::TokenStream;
 use crate::utils::line_column::LineColumn;
@@ -10,20 +12,44 @@ use crate::utils::span::Span;
 pub struct LexError {
     message: String,
     span: Span,
-    source_code: SourceCode,
 }
 
 impl Display for LexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let line = self.span.start().line();
         let column = self.span.start().column();
-        let line_content = self.source_code.code().lines().nth(line - 1).unwrap();
+        let line_content = self
+            .span
+            .source_code()
+            .code()
+            .lines()
+            .nth(line - 1)
+            .unwrap();
         let output = format!(
-            "\nCompile Error: {} at Line {} at Column {}\n",
-            self.message, line, column,
-        ) + &format!("--> {}\n", self.source_code.file_path())
-            + &format!("    {} | {}\n", line, line_content)
-            + &format!("{}^-- Here", " ".repeat(column + 8));
+            "{}: {} \
+            \n{} {}:{}:{} \
+            \n{: >5} {} \
+            \n{: >5} {} {} \
+            \n{: >5} {}{}{} \
+            ",
+            "compile error".red().bold(),
+            self.message,
+            "-->".blue().bold(),
+            self.span.source_code().file_path(),
+            line,
+            column,
+            " ",
+            "|".blue().bold(),
+            line.to_string().blue().bold(),
+            "|".blue().bold(),
+            line_content,
+            " ",
+            "|".blue().bold(),
+            " ".repeat(column),
+            "^".repeat(self.span.end().column() - self.span.start().column())
+                .red()
+                .bold(),
+        );
         write!(f, "{}", output)
     }
 }
@@ -65,7 +91,6 @@ impl Lexer {
         self.errors.push(LexError {
             span,
             message: message.to_owned(),
-            source_code: self.source_code.clone(),
         });
     }
 

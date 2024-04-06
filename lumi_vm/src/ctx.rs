@@ -7,7 +7,6 @@ use crate::const_stack::ConstStack;
 use crate::frame::{CallFrame, CallStack};
 use crate::obj_stack::ObjectStack;
 use crate::object::Object;
-use crate::runtime_error::RuntimeError;
 use crate::scope::Scope;
 
 pub(crate) struct ExecutionContext {

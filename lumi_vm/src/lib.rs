@@ -1,6 +1,7 @@
 mod const_stack;
 mod ctx;
 mod frame;
+mod obj;
 mod obj_stack;
 mod object;
 mod runtime_error;
@@ -90,7 +91,13 @@ impl VirtualMachine {
                         ctx.push_object(Object::Instance(instance));
                         ctx.next_instruction();
                     } else {
-                        // return Err(RuntimeError::new("Symbol cannot be initialized"));
+                        let span = ctx.chunk.span(bytecode_pos).unwrap();
+                        let stack_trace = ctx.call_stack.stack_trace();
+                        return Err(RuntimeError::InvalidInstantiation {
+                            symbol_name: "".to_string(),
+                            span,
+                            stack_trace,
+                        });
                     }
                 }
                 Bytecode::Println => {
@@ -194,10 +201,13 @@ impl VirtualMachine {
                             }
                             ctx.set_instruction(end);
                         } else {
-                            let message = format!("symbol \"{}\" was not found", class_name);
                             let span = ctx.chunk.span(bytecode_pos).unwrap();
                             let stack_trace = ctx.call_stack.stack_trace();
-                            return Err(RuntimeError::new(&message, span, stack_trace));
+                            return Err(RuntimeError::SymbolNotFound {
+                                symbol_name: class_name,
+                                span,
+                                stack_trace,
+                            });
                         }
                     }
                 }
@@ -216,10 +226,13 @@ impl VirtualMachine {
                         if let Some(object) = ctx.scope.symbol(&symbol_name) {
                             ctx.push_object(object);
                         } else {
-                            let message = format!("symbol \"{}\" was not found", symbol_name);
                             let span = ctx.chunk.span(bytecode_pos).unwrap();
                             let stack_trace = ctx.call_stack.stack_trace();
-                            return Err(RuntimeError::new(&message, span, stack_trace));
+                            return Err(RuntimeError::SymbolNotFound {
+                                symbol_name: symbol_name,
+                                span,
+                                stack_trace,
+                            });
                         }
                     }
                     ctx.next_instruction();
@@ -240,14 +253,14 @@ impl VirtualMachine {
                                 if let Some(prop) = instance.field(&prop_name) {
                                     ctx.push_object(prop.clone());
                                 } else {
-                                    let message = format!(
-                                        "cannot read property \"{}\" of instance of \"{}\"",
-                                        prop_name,
-                                        instance.class().name()
-                                    );
                                     let span = ctx.chunk.span(bytecode_pos).unwrap();
                                     let stack_trace = ctx.call_stack.stack_trace();
-                                    return Err(RuntimeError::new(&message, span, stack_trace));
+                                    return Err(RuntimeError::CannotReadProperty {
+                                        property_name: prop_name,
+                                        class_name: class_ptr.from_ptr().name(),
+                                        span,
+                                        stack_trace,
+                                    });
                                 }
                             }
                         }
@@ -320,6 +333,14 @@ impl VirtualMachine {
                         if let Function::Default { scope, .. } = method.function() {
                             ctx.scope = scope.clone()
                         }
+                    } else {
+                        let span = ctx.chunk.span(bytecode_pos).unwrap();
+                        let stack_trace = ctx.call_stack.stack_trace();
+                        return Err(RuntimeError::SymbolNotCallable {
+                            symbol_name: "".to_string(),
+                            span,
+                            stack_trace,
+                        });
                     }
                 }
                 Bytecode::JumpIfFalse => {
@@ -333,6 +354,8 @@ impl VirtualMachine {
                         } else {
                             ctx.next_instruction();
                         }
+                    } else {
+                        ctx.next_instruction();
                     }
                 }
                 Bytecode::Add => {
@@ -349,21 +372,21 @@ impl VirtualMachine {
                         ctx.push_object(object);
                         ctx.next_instruction();
                     } else {
-                        let message = format!(
-                            "invalid operands to binary expression (\"{}\" and \"{}\")",
-                            operand1.class_ptr().unwrap().from_ptr().name(),
-                            operand2.class_ptr().unwrap().from_ptr().name()
-                        );
                         let span = ctx.chunk.span(bytecode_pos).unwrap();
                         let stack_trace = ctx.call_stack.stack_trace();
-                        return Err(RuntimeError::new(&message, span, stack_trace));
+                        return Err(RuntimeError::InvalidBinaryOperands {
+                            type_name_left: "".to_string(),
+                            type_name_right: "".to_string(),
+                            span,
+                            stack_trace,
+                        });
                     }
                 }
                 Bytecode::Subtract => {
                     let operand2 = ctx.pop_object();
                     let operand1 = ctx.pop_object();
                     if let (Object::Primitive(prim1), Object::Primitive(prim2)) =
-                        (operand1, operand2)
+                        (operand1.clone(), operand2.clone())
                     {
                         let n_ptr = GarbageCollector::register(Primitive::new(
                             num_class_ptr,
@@ -372,13 +395,22 @@ impl VirtualMachine {
                         let object = Object::Primitive(n_ptr);
                         ctx.push_object(object);
                         ctx.next_instruction();
+                    } else {
+                        let span = ctx.chunk.span(bytecode_pos).unwrap();
+                        let stack_trace = ctx.call_stack.stack_trace();
+                        return Err(RuntimeError::InvalidBinaryOperands {
+                            type_name_left: "".to_string(),
+                            type_name_right: "".to_string(),
+                            span,
+                            stack_trace,
+                        });
                     }
                 }
                 Bytecode::Equals => {
                     let operand2 = ctx.pop_object();
                     let operand1 = ctx.pop_object();
                     if let (Object::Primitive(operand1), Object::Primitive(operand2)) =
-                        (operand1, operand2)
+                        (operand1.clone(), operand2.clone())
                     {
                         let bool_ptr = GarbageCollector::register(Primitive::new(
                             bool_class_ptr,
@@ -391,6 +423,15 @@ impl VirtualMachine {
                         let object = Object::Primitive(bool_ptr);
                         ctx.push_object(object);
                         ctx.next_instruction();
+                    } else {
+                        let span = ctx.chunk.span(bytecode_pos).unwrap();
+                        let stack_trace = ctx.call_stack.stack_trace();
+                        return Err(RuntimeError::InvalidBinaryOperands {
+                            type_name_left: "".to_string(),
+                            type_name_right: "".to_string(),
+                            span,
+                            stack_trace,
+                        });
                     }
                 }
                 Bytecode::Return => {

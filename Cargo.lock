@@ -142,11 +142,15 @@ dependencies = [
 [[package]]
 name = "lumi_lxr"
 version = "0.1.0"
+dependencies = [
+ "colored",
+]
 
 [[package]]
 name = "lumi_psr"
 version = "0.1.0"
 dependencies = [
+ "colored",
  "lumi_lxr",
 ]
 

@@ -31,7 +31,7 @@ impl Emitter for Expr {
             Self::Get(get) => {
                 get.expr().emit(chunk);
                 chunk.add_constant(Constant::Str(get.ident().source_text()));
-                chunk.add_bytecode_2(Bytecode::GetProp, get.span().clone());
+                chunk.add_bytecode_2(Bytecode::GetProp, get.ident().span().clone());
             }
             Self::Call(call) => {
                 call.callee().emit(chunk);
@@ -39,7 +39,7 @@ impl Emitter for Expr {
                     arg.emit(chunk);
                 }
                 chunk.add_constant(Constant::Size(call.args().len()));
-                chunk.add_bytecode_2(Bytecode::CallFun, call.span().clone());
+                chunk.add_bytecode_2(Bytecode::CallFun, call.callee().span().clone());
             }
             Self::Paren(paren) => {
                 paren.expr().emit(chunk);
@@ -58,10 +58,10 @@ impl Emitter for Expr {
                 binary.right().emit(chunk);
                 match &binary.op().source_text()[..] {
                     "+" => chunk.add_bytecode_2(Bytecode::Add, binary.span().clone()),
-                    "-" => chunk.add_bytecode(Bytecode::Subtract),
+                    "-" => chunk.add_bytecode_2(Bytecode::Subtract, binary.span().clone()),
                     "*" => chunk.add_bytecode(Bytecode::Multiply),
                     "/" => chunk.add_bytecode(Bytecode::Divide),
-                    "==" => chunk.add_bytecode(Bytecode::Equals),
+                    "==" => chunk.add_bytecode_2(Bytecode::Equals, binary.span().clone()),
                     "!=" => {
                         chunk.add_bytecode(Bytecode::Equals);
                         chunk.add_bytecode(Bytecode::Not);
@@ -98,7 +98,7 @@ impl Emitter for Expr {
                     chunk.add_constant(Constant::Str(field_name));
                 }
                 chunk.add_constant(Constant::Size(class.fields().len()));
-                chunk.add_bytecode(Bytecode::InstantiateClass);
+                chunk.add_bytecode_2(Bytecode::InstantiateClass, class.cls().span().clone());
             }
         }
     }

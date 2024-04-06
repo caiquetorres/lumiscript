@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 lumi_lxr = { path = "../lumi_lxr" }
+colored = "2.1.0"
