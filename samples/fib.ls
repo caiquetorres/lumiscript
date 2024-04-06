@@ -7,7 +7,7 @@ impl Add for Num {
 }
 
 fun main() {
-    let res = fib(9);
+    let res = fib(10);
     println res;
 }
 

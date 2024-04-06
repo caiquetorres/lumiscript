@@ -1,7 +1,5 @@
 use lumi_bc_e::chunk::Constant;
 
-use crate::runtime_error::RuntimeError;
-
 #[derive(Debug)]
 pub(crate) struct ConstStack {
     buffer: Vec<Constant>,
@@ -16,9 +14,7 @@ impl ConstStack {
         self.buffer.push(constant)
     }
 
-    pub(crate) fn pop(&mut self) -> Result<Constant, RuntimeError> {
-        self.buffer
-            .pop()
-            .ok_or(RuntimeError::new("Constant stack underflow"))
+    pub(crate) fn pop(&mut self) -> Constant {
+        self.buffer.pop().unwrap()
     }
 }

@@ -10,7 +10,7 @@ impl Emitter for Expr {
             Self::Ident(ident) => {
                 let ident_name = ident.ident().source_text();
                 chunk.add_constant(Constant::Str(ident_name));
-                chunk.add_bytecode(Bytecode::GetSymbol);
+                chunk.add_bytecode_2(Bytecode::GetSymbol, ident.span().clone());
             }
             Self::Lit(lit) => match lit {
                 LitExpr::Num { span } => {
@@ -31,7 +31,7 @@ impl Emitter for Expr {
             Self::Get(get) => {
                 get.expr().emit(chunk);
                 chunk.add_constant(Constant::Str(get.ident().source_text()));
-                chunk.add_bytecode(Bytecode::GetProp);
+                chunk.add_bytecode_2(Bytecode::GetProp, get.span().clone());
             }
             Self::Call(call) => {
                 call.callee().emit(chunk);
@@ -39,7 +39,7 @@ impl Emitter for Expr {
                     arg.emit(chunk);
                 }
                 chunk.add_constant(Constant::Size(call.args().len()));
-                chunk.add_bytecode(Bytecode::CallFun);
+                chunk.add_bytecode_2(Bytecode::CallFun, call.span().clone());
             }
             Self::Paren(paren) => {
                 paren.expr().emit(chunk);
@@ -57,7 +57,7 @@ impl Emitter for Expr {
                 binary.left().emit(chunk);
                 binary.right().emit(chunk);
                 match &binary.op().source_text()[..] {
-                    "+" => chunk.add_bytecode(Bytecode::Add),
+                    "+" => chunk.add_bytecode_2(Bytecode::Add, binary.span().clone()),
                     "-" => chunk.add_bytecode(Bytecode::Subtract),
                     "*" => chunk.add_bytecode(Bytecode::Multiply),
                     "/" => chunk.add_bytecode(Bytecode::Divide),

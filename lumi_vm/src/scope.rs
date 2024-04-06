@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::object::{Class, Function, Object};
-use crate::runtime_error::RuntimeError;
 
 #[derive(Debug)]
 struct InnerScope {
@@ -45,33 +44,27 @@ impl Scope {
             .insert(ident.to_owned(), object);
     }
 
-    pub(crate) fn assign_symbol(&self, ident: &str, object: Object) -> Result<(), RuntimeError> {
+    pub(crate) fn assign_symbol(&self, ident: &str, object: Object) -> Option<()> {
         if let Some(symbol) = self.inner.borrow_mut().symbols.get_mut(ident) {
             *symbol = object;
-            Ok(())
+            Some(())
         } else {
             if let Some(parent) = &self.parent {
                 parent.assign_symbol(ident, object)
             } else {
-                Err(RuntimeError::new(&format!(
-                    "Identifier '{}' not found",
-                    ident
-                )))
+                None
             }
         }
     }
 
-    pub(crate) fn symbol(&self, ident: &str) -> Result<Object, RuntimeError> {
+    pub(crate) fn symbol(&self, ident: &str) -> Option<Object> {
         if let Some(value) = self.inner.borrow().symbols.get(ident) {
-            Ok(value.clone())
+            Some(value.clone())
         } else {
             if let Some(parent) = &self.parent {
                 parent.symbol(ident)
             } else {
-                Err(RuntimeError::new(&format!(
-                    "Identifier '{}' not found",
-                    ident
-                )))
+                None
             }
         }
     }
@@ -83,21 +76,14 @@ impl Scope {
             .insert((cls, ident.to_owned()), method);
     }
 
-    pub(crate) fn method(
-        &self,
-        cls: *const Class,
-        ident: &str,
-    ) -> Result<*const Function, RuntimeError> {
+    pub(crate) fn method(&self, cls: *const Class, ident: &str) -> Option<*const Function> {
         if let Some(value) = self.inner.borrow().methods.get(&(cls, ident.to_owned())) {
-            Ok(value.clone())
+            Some(value.clone())
         } else {
             if let Some(parent) = &self.parent {
                 parent.method(cls, ident)
             } else {
-                Err(RuntimeError::new(&format!(
-                    "Identifier '{}' not found",
-                    ident
-                )))
+                None
             }
         }
     }

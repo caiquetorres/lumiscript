@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 lumi_psr = { path = "../lumi_psr" }
+lumi_lxr = { path = "../lumi_lxr" }

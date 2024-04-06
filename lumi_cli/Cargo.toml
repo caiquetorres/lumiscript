@@ -12,3 +12,4 @@ lumi_lxr = { path = "../lumi_lxr" }
 lumi_psr = { path = "../lumi_psr" }
 lumi_bc_e = { path = "../lumi_bc_e" }
 lumi_vm = { path = "../lumi_vm" }
+colored = "2.1.0"

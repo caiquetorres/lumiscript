@@ -1,4 +1,4 @@
-use crate::{runtime_error::RuntimeError, Object};
+use crate::Object;
 
 #[derive(Debug)]
 pub(crate) struct ObjectStack {
@@ -14,9 +14,7 @@ impl ObjectStack {
         self.buffer.push(obj)
     }
 
-    pub(crate) fn pop(&mut self) -> Result<Object, RuntimeError> {
-        self.buffer
-            .pop()
-            .ok_or(RuntimeError::new("Object stack underflow"))
+    pub(crate) fn pop(&mut self) -> Object {
+        self.buffer.pop().unwrap()
     }
 }

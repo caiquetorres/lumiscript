@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use lumi_lxr::span::Span;
+
 macro_rules! define_bytecodes {
     ($($name:ident),*) => {
         #[repr(u8)]
@@ -71,6 +75,7 @@ impl Constant {
 pub struct Chunk {
     buffer: Vec<u8>,
     constants: Vec<Constant>,
+    source_map: HashMap<usize, Span>,
 }
 
 impl Chunk {
@@ -78,6 +83,7 @@ impl Chunk {
         Self {
             buffer: vec![],
             constants: vec![],
+            source_map: HashMap::new(),
         }
     }
 
@@ -95,6 +101,15 @@ impl Chunk {
 
     pub fn add_bytecode(&mut self, bytecode: Bytecode) {
         self.buffer.push(bytecode as u8);
+    }
+
+    pub fn add_bytecode_2(&mut self, bytecode: Bytecode, source: Span) {
+        self.buffer.push(bytecode as u8);
+        self.source_map.insert(self.buffer.len() - 1, source);
+    }
+
+    pub fn span(&self, pos: usize) -> Option<Span> {
+        self.source_map.get(&pos).map(|value| value.clone())
     }
 
     pub fn bytecode(&self, index: usize) -> Option<Bytecode> {

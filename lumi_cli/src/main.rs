@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use clap::Parser;
+use colored::Colorize;
 use lumi_bc_e::emitter::BytecodeEmitter;
 use lumi_lxr::lexer::Lexer;
 use lumi_lxr::source_code::SourceCode;
@@ -30,19 +31,27 @@ fn main() {
                     // ast.display(0);
                     let chunk = BytecodeEmitter::emit(&ast);
                     println!(
-                        "Compilation time: {} milliseconds",
+                        "{}: {} milliseconds",
+                        "Compilation time",
                         (Instant::now() - start_compilation_time).as_millis()
                     );
-                    println!("Chunk size: {:.2} kB\n", chunk.size());
-                    let mut vm = VirtualMachine::new();
+                    println!(
+                        "{}: {}\n",
+                        "Chunk size",
+                        format!("{:.2} kB", chunk.size()).bold().green()
+                    );
                     let start_execution_time = Instant::now();
-                    println!("Output:");
-                    if let Ok(_) = vm.run(chunk) {
-                        println!(
-                            "\nExecution time: {} milliseconds",
-                            (Instant::now() - start_execution_time).as_millis()
-                        );
+                    match VirtualMachine::run(chunk) {
+                        Ok(_) => {}
+                        Err(runtime_error) => {
+                            eprintln!("{}", runtime_error);
+                        }
                     }
+                    println!(
+                        "\n{}: {} milliseconds",
+                        "Execution time",
+                        (Instant::now() - start_execution_time).as_millis()
+                    );
                 }
                 Err(error) => eprintln!("{}", error),
             };
