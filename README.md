@@ -77,7 +77,28 @@ The syntax for nulls is straightforward: it's represented by the word `nil`.
 
 Now, you might wonder, why `nil` instead of `null`? Well, the answer is simple: because I want to.
 
-### Classes
+## Functions
+
+We know functions are crucial—we really do. In `LumiScript`, functions are declared using the keyword `fun`. Check out an example below:
+
+```
+fun two() {
+  println 2;
+}
+two(); // invocation
+```
+
+They can also receive parameters and return values, as shown in the example below.
+
+```
+fun sum(a: Num, b: Num) -> Num {
+  a + b
+}
+```
+
+> Now, here's an important point: there are two ways to return values from functions. The first one is using the keyword `return`, just like in any other programming language. The other way is by not using this keyword and omitting the semicolon at the end of the line (you can thank Rust and Kotlin for that).
+
+## Classes
 
 Alright, let's get down to business, shall we?
 
@@ -130,23 +151,49 @@ person.shoutTheAge(); // doesn't work
 
 With scoped implementations, like in the example above, you can see that methods defined within a certain scope are only accessible within that scope. Neat, huh?
 
-## Functions
+### Special methods
 
-We know functions are crucial—we really do. In `LumiScript`, functions are declared using the keyword `fun`. Check out an example below:
+Let's talk about something I've been itching to implement from the get-go: special methods.
 
-```
-fun two() {
-  println 2;
-}
-two(); // invocation
-```
-
-They can also receive parameters and return values, as shown in the example below.
+To explain this concept, let's work with the class defined below:
 
 ```
-fun sum(a: Num, b: Num) -> Num {
-  a + b
+class Point {
+  x: Num,
+  y: Num
 }
 ```
 
-> Now, here's an important point: there are two ways to return values from functions. The first one is using the keyword `return`, just like in any other programming language. The other way is by not using this keyword and omitting the semicolon at the end of the line (you can thank Rust and Kotlin for that).
+In some languages, I can implement a special method that allows me to perform operations like addition and subtraction between values. We commonly see this with numbers—in basically all programming languages, we can add 1 + 2. But in my language, I want to take it further.
+
+```
+impl Add for Point {
+  fun add(other: This) -> This {
+    This {
+      x: this.x + other.x,
+      y: this.y + other.y
+    }
+  }
+}
+```
+
+> Note that the code uses `This` and `this`. These symbols essentially refer to the class type and the instance, respectively.
+
+The snippet above represents this behavior. By implementing the trait Add, my Point class is now capable of being added to another Point class using a simple + character (if you want to see that happening, check out samples/point.ls).
+
+```
+let p1 = Point { x: 1, y: 2 };
+let p2 = Point { x: 3, y: 4 };
+let p3 = p1 + p2;
+```
+
+Exciting, isn't it?
+
+Currently, the traits that can be implemented are:
+
+- `Add` - for addition
+- `Sub` - for subtractions
+- `Eq` - for comparisons
+- `Not` - for negations
+
+Keep in mind that I'm working on adding new ones. These basic calculations are just the beginning!
