@@ -55,6 +55,9 @@ impl Vm {
                 Bytecode::CallFunction => op_call_function(self)?,
                 Bytecode::DeclareMethod => op_declare_method(self)?,
                 Bytecode::Add => op_add(self)?,
+                Bytecode::Subtract => op_sub(self)?,
+                Bytecode::Equals => op_eq(self)?,
+                Bytecode::JumpIfFalse => op_jump_if_false(self)?,
                 _ => panic!("Bytecode {:?} not implemented", instruction),
             };
         }
@@ -136,8 +139,62 @@ fn register(vm: &mut Vm) {
             let other = vm.memory.get(other);
             if let (Object::Primitive(operand1), Object::Primitive(operand2)) = (this, other) {
                 Ok(Object::Primitive(Primitive::new(
-                    32,
+                    2,
                     operand1.value() + operand2.value(),
+                )))
+            } else {
+                let index = vm.frame().instructions_ptr;
+                let span = vm.chunk().span(index);
+                Err(RuntimeError::InvalidBinaryOperands {
+                    span: span.clone(),
+                    stack_trace: vm.stack_trace.clone(),
+                })
+            }
+        }),
+    );
+
+    vm.register_native_method(
+        2,
+        "sub",
+        &vec!["other".to_owned()],
+        Box::new(|vm, params| {
+            let this = *params.get("this").unwrap();
+            let other = *params.get("other").unwrap();
+            let this = vm.memory.get(this);
+            let other = vm.memory.get(other);
+            if let (Object::Primitive(operand1), Object::Primitive(operand2)) = (this, other) {
+                Ok(Object::Primitive(Primitive::new(
+                    2,
+                    operand1.value() - operand2.value(),
+                )))
+            } else {
+                let index = vm.frame().instructions_ptr;
+                let span = vm.chunk().span(index);
+                Err(RuntimeError::InvalidBinaryOperands {
+                    span: span.clone(),
+                    stack_trace: vm.stack_trace.clone(),
+                })
+            }
+        }),
+    );
+
+    vm.register_native_method(
+        2,
+        "eq",
+        &vec!["other".to_owned()],
+        Box::new(|vm, params| {
+            let this = *params.get("this").unwrap();
+            let other = *params.get("other").unwrap();
+            let this = vm.memory.get(this);
+            let other = vm.memory.get(other);
+            if let (Object::Primitive(operand1), Object::Primitive(operand2)) = (this, other) {
+                Ok(Object::Primitive(Primitive::new(
+                    1,
+                    if operand1.value() == operand2.value() {
+                        1.0
+                    } else {
+                        0.0
+                    },
                 )))
             } else {
                 let index = vm.frame().instructions_ptr;
@@ -507,7 +564,7 @@ fn op_add(vm: &mut Vm) -> Result<(), RuntimeError> {
             let index = vm.frame().instructions_ptr;
             let span = vm.chunk().span(index);
             Err(RuntimeError::Custom {
-                message: "trait \"add\" not implemented".to_owned(),
+                message: "trait \"Add\" not implemented".to_owned(),
                 span: span.clone(),
                 stack_trace: vm.stack_trace.clone(),
             })
@@ -516,7 +573,61 @@ fn op_add(vm: &mut Vm) -> Result<(), RuntimeError> {
         let index = vm.frame().instructions_ptr;
         let span = vm.chunk().span(index);
         Err(RuntimeError::Custom {
-            message: "trait \"add\" not implemented".to_owned(),
+            message: "trait \"Add\" not implemented".to_owned(),
+            span: span.clone(),
+            stack_trace: vm.stack_trace.clone(),
+        })
+    }
+}
+
+fn op_sub(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let operand2 = vm.object_stack.pop().unwrap();
+    let operand1 = *vm.object_stack.last().unwrap();
+    let object1 = vm.memory.get(operand1);
+    if let Some(class_id) = object1.class_id() {
+        if let Some(method) = vm.scope.method(class_id, "sub") {
+            call_function(vm, &[operand2], method)
+        } else {
+            let index = vm.frame().instructions_ptr;
+            let span = vm.chunk().span(index);
+            Err(RuntimeError::Custom {
+                message: "trait \"Sub\" not implemented".to_owned(),
+                span: span.clone(),
+                stack_trace: vm.stack_trace.clone(),
+            })
+        }
+    } else {
+        let index = vm.frame().instructions_ptr;
+        let span = vm.chunk().span(index);
+        Err(RuntimeError::Custom {
+            message: "trait \"Sub\" not implemented".to_owned(),
+            span: span.clone(),
+            stack_trace: vm.stack_trace.clone(),
+        })
+    }
+}
+
+fn op_eq(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let operand2 = vm.object_stack.pop().unwrap();
+    let operand1 = *vm.object_stack.last().unwrap();
+    let object1 = vm.memory.get(operand1);
+    if let Some(class_id) = object1.class_id() {
+        if let Some(method) = vm.scope.method(class_id, "eq") {
+            call_function(vm, &[operand2], method)
+        } else {
+            let index = vm.frame().instructions_ptr;
+            let span = vm.chunk().span(index);
+            Err(RuntimeError::Custom {
+                message: "trait \"Equals\" not implemented".to_owned(),
+                span: span.clone(),
+                stack_trace: vm.stack_trace.clone(),
+            })
+        }
+    } else {
+        let index = vm.frame().instructions_ptr;
+        let span = vm.chunk().span(index);
+        Err(RuntimeError::Custom {
+            message: "trait \"Equals\" not implemented".to_owned(),
             span: span.clone(),
             stack_trace: vm.stack_trace.clone(),
         })
@@ -574,4 +685,19 @@ fn call_function(vm: &mut Vm, args: &[usize], callee_id: usize) -> Result<(), Ru
             stack_trace: vm.stack_trace.clone(),
         })
     }
+}
+
+fn op_jump_if_false(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let offset = vm.constant_stack.pop().unwrap();
+    let object_id = vm.object_stack.pop().unwrap();
+    if let Object::Primitive(primitive) = vm.memory.get(object_id) {
+        if primitive.value() == 0.0 {
+            if let Constant::Size(offset) = offset {
+                vm.frame_mut().instructions_ptr += offset + 1;
+            }
+        } else {
+            vm.frame_mut().instructions_ptr += 1;
+        }
+    }
+    Ok(())
 }

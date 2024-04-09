@@ -1,14 +1,17 @@
+trait Eq {
+    fun eq(other: This) -> Bool;
+}
+
+impl Eq for Num {
+    extern fun eq(other: This) -> Bool;
+}
+
 trait Add {
     fun add(other: This) -> This;
 }
 
 impl Add for Num {
     extern fun add(other: This) -> This;
-}
-
-fun main() {
-    let res = fib(10);
-    println res;
 }
 
 fun fib(n: Num) -> Num {
@@ -19,6 +22,10 @@ fun fib(n: Num) -> Num {
         return 1;
     }
     return fib(n - 1) + fib(n - 2);
+}
+
+fun main() {
+    println fib(10);
 }
 
 main();

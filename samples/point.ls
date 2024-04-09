@@ -1,9 +1,9 @@
 trait Add {
-    fun add(other: Self) -> Self;
+    fun add(other: This) -> This;
 }
 
 impl Add for Num {
-    extern fun add(other: Self) -> Self;
+    extern fun add(other: This) -> This;
 }
 
 class Point {
@@ -20,9 +20,13 @@ impl Add for Point {
     }
 }
 
-let p1 = Point { x: 1, y: 1 };
-let p2 = Point { x: 2, y: 3 };
-let sum = p1 + p2;
+fun main() {
+    let p1 = Point { x: 1, y: 1 };
+    let p2 = Point { x: 2, y: 3 };
+    let sum = p1 + p2;
 
-println sum.x;
-println sum.y;
+    println sum.x;
+    println sum.y;
+}
+
+main();

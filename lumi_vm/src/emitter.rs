@@ -159,6 +159,23 @@ impl Emitter for Stmt {
                     }
                 }
             }
+            Self::If(r#if) => {
+                r#if.cond().emit(chunk);
+                let then_jump = chunk.len();
+                chunk.push_constant(Constant::Size(usize::MAX), r#if.span().clone());
+                chunk.push_instruction(Bytecode::JumpIfFalse, r#if.span().clone());
+                let start = chunk.len();
+                chunk.push_instruction(Bytecode::BeginScope, r#if.span().clone());
+                for stmt in r#if.stmts() {
+                    stmt.emit(chunk);
+                }
+                chunk.push_instruction(Bytecode::EndScope, r#if.span().clone());
+                let end = chunk.len();
+                let offset = end - start;
+                if let Some(constant) = chunk.constant_mut(then_jump) {
+                    *constant = Constant::Size(offset);
+                }
+            }
             Self::Trait(_) => {}
             _ => todo!(),
         }
