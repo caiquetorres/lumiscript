@@ -49,7 +49,7 @@ impl Instance {
         Self { class, fields }
     }
 
-    pub(crate) fn class(&self) -> usize {
+    pub(crate) fn class_id(&self) -> usize {
         self.class
     }
 

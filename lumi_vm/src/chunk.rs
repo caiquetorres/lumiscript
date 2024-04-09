@@ -65,6 +65,36 @@ pub enum Constant {
     Size(usize),
 }
 
+impl Constant {
+    pub(crate) fn as_bool(&self) -> bool {
+        match self {
+            Self::Bool(value) => *value,
+            _ => panic!("Cannot constant to bool"),
+        }
+    }
+
+    pub(crate) fn as_number(&self) -> f64 {
+        match self {
+            Self::Number(value) => *value,
+            _ => panic!("Cannot constant to number"),
+        }
+    }
+
+    pub(crate) fn as_string(&self) -> String {
+        match self {
+            Self::String(value) => value.clone(),
+            _ => panic!("Cannot constant to string"),
+        }
+    }
+
+    pub(crate) fn as_size(&self) -> usize {
+        match self {
+            Self::Size(value) => *value,
+            _ => panic!("Cannot constant to size"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Chunk {
     instructions: Vec<u8>,
