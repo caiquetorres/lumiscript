@@ -2,12 +2,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::object::{Class, Function, Object};
-
 #[derive(Debug)]
 struct InnerScope {
-    symbols: HashMap<String, Object>,
-    methods: HashMap<(*const Class, String), *const Function>,
+    symbols: HashMap<String, usize>,
+    methods: HashMap<(usize, String), usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -37,14 +35,14 @@ impl Scope {
         }
     }
 
-    pub(crate) fn set_symbol(&self, ident: &str, object: Object) {
+    pub(crate) fn set_symbol(&self, ident: &str, object: usize) {
         self.inner
             .borrow_mut()
             .symbols
             .insert(ident.to_owned(), object);
     }
 
-    pub(crate) fn assign_symbol(&self, ident: &str, object: Object) -> Option<()> {
+    pub(crate) fn assign_symbol(&self, ident: &str, object: usize) -> Option<()> {
         if let Some(symbol) = self.inner.borrow_mut().symbols.get_mut(ident) {
             *symbol = object;
             Some(())
@@ -57,9 +55,9 @@ impl Scope {
         }
     }
 
-    pub(crate) fn symbol(&self, ident: &str) -> Option<Object> {
+    pub(crate) fn symbol(&self, ident: &str) -> Option<usize> {
         if let Some(value) = self.inner.borrow().symbols.get(ident) {
-            Some(value.clone())
+            Some(*value)
         } else {
             if let Some(parent) = &self.parent {
                 parent.symbol(ident)
@@ -69,19 +67,19 @@ impl Scope {
         }
     }
 
-    pub(crate) fn set_method(&self, cls: *const Class, ident: &str, method: *const Function) {
+    pub(crate) fn set_method(&self, class: usize, ident: &str, method: usize) {
         self.inner
             .borrow_mut()
             .methods
-            .insert((cls, ident.to_owned()), method);
+            .insert((class, ident.to_owned()), method);
     }
 
-    pub(crate) fn method(&self, cls: *const Class, ident: &str) -> Option<*const Function> {
-        if let Some(value) = self.inner.borrow().methods.get(&(cls, ident.to_owned())) {
+    pub(crate) fn method(&self, class: usize, ident: &str) -> Option<usize> {
+        if let Some(value) = self.inner.borrow().methods.get(&(class, ident.to_owned())) {
             Some(value.clone())
         } else {
             if let Some(parent) = &self.parent {
-                parent.method(cls, ident)
+                parent.method(class, ident)
             } else {
                 None
             }

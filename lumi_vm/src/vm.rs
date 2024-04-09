@@ -1,0 +1,577 @@
+use std::{collections::HashMap, rc::Rc, time::Instant};
+
+use crate::{
+    call_frame::{CallFrame, CallStack},
+    chunk::{Bytecode, Chunk, Constant},
+    memory::Memory,
+    object::{Class, Function, InnerFunction, Instance, NativeFunction, Object, Primitive},
+    runtime_error::RuntimeError,
+    scope::Scope,
+    stack_trace::{StackTrace, Trace, TraceFunction},
+};
+
+pub struct Vm {
+    chunk: Chunk,
+    memory: Memory,
+    call_stack: CallStack,
+    object_stack: Vec<usize>,
+    constant_stack: Vec<Constant>,
+    stack_trace: StackTrace,
+    scope: Rc<Scope>,
+}
+
+impl Vm {
+    pub fn new(chunk: Chunk) -> Self {
+        let root_call_frame = CallFrame::new(None, HashMap::new());
+        Self {
+            chunk,
+            memory: Memory::new(),
+            call_stack: CallStack::new(root_call_frame),
+            object_stack: vec![],
+            constant_stack: vec![],
+            stack_trace: StackTrace::new(),
+            scope: Rc::new(Scope::root()),
+        }
+    }
+
+    pub fn run(&mut self) -> Result<(), RuntimeError> {
+        register(self);
+        while let Some(instruction) = self.current_instruction() {
+            match instruction {
+                Bytecode::LoadConstant => op_load_constant(self)?,
+                Bytecode::ConvertConstant => op_convert_constant(self)?,
+                Bytecode::DeclareClass => op_declare_class(self)?,
+                Bytecode::Instantiate => op_instantiate(self)?,
+                Bytecode::PrintLn => op_println(self)?,
+                Bytecode::GetSymbol => op_get_symbol(self)?,
+                Bytecode::DeclareVariable => op_declare_var(self)?,
+                Bytecode::SetVariable => op_set_var(self)?,
+                Bytecode::Return => op_return(self)?,
+                Bytecode::BeginScope => op_begin_scope(self)?,
+                Bytecode::EndScope => op_end_scope(self)?,
+                Bytecode::SetProperty => op_set_property(self)?,
+                Bytecode::GetProperty => op_get_property(self)?,
+                Bytecode::DeclareFunction => op_declare_function(self)?,
+                Bytecode::CallFunction => op_call_function(self)?,
+                Bytecode::DeclareMethod => op_declare_method(self)?,
+                Bytecode::Add => op_add(self)?,
+                _ => panic!("Bytecode {:?} not implemented", instruction),
+            };
+        }
+        Ok(())
+    }
+
+    fn register_native_function(
+        &mut self,
+        function_name: &str,
+        params: &[String],
+        function: NativeFunction,
+    ) {
+        let function_id = self.memory.alloc(Object::Function(Function::new(
+            function_name,
+            params,
+            None,
+            InnerFunction::Native { fun: function },
+        )));
+        self.scope.set_symbol(function_name, function_id);
+    }
+
+    fn register_native_method(
+        &mut self,
+        class_id: usize,
+        method_name: &str,
+        params: &[String],
+        function: NativeFunction,
+    ) {
+        let method_id = self.memory.alloc(Object::Function(Function::new(
+            method_name,
+            params,
+            Some(class_id),
+            InnerFunction::Native { fun: function },
+        )));
+        self.scope.set_method(class_id, method_name, method_id);
+    }
+
+    fn frame(&self) -> &CallFrame {
+        self.call_stack.current()
+    }
+
+    fn frame_mut(&mut self) -> &mut CallFrame {
+        self.call_stack.current_mut()
+    }
+
+    fn chunk(&self) -> &Chunk {
+        &self.chunk
+    }
+
+    fn current_instruction(&self) -> Option<Bytecode> {
+        self.chunk.instruction(self.frame().instructions_ptr)
+    }
+}
+
+fn register(vm: &mut Vm) {
+    vm.memory.alloc(Object::Class(Class::new("Nil")));
+    vm.memory.alloc(Object::Class(Class::new("Bool")));
+    vm.memory.alloc(Object::Class(Class::new("Number")));
+
+    let start = Instant::now();
+    vm.register_native_function(
+        "clock",
+        &vec![],
+        Box::new(move |_, _| {
+            let end = Instant::now();
+            let diff = (end - start).as_millis();
+            Ok(Object::Primitive(Primitive::new(2, diff as f64)))
+        }),
+    );
+
+    vm.register_native_method(
+        2,
+        "add",
+        &vec!["other".to_owned()],
+        Box::new(|vm, params| {
+            let this = *params.get("this").unwrap();
+            let other = *params.get("other").unwrap();
+            let this = vm.memory.get(this);
+            let other = vm.memory.get(other);
+            if let (Object::Primitive(operand1), Object::Primitive(operand2)) = (this, other) {
+                Ok(Object::Primitive(Primitive::new(
+                    32,
+                    operand1.value() + operand2.value(),
+                )))
+            } else {
+                let index = vm.frame().instructions_ptr;
+                let span = vm.chunk().span(index);
+                Err(RuntimeError::InvalidBinaryOperands {
+                    span: span.clone(),
+                    stack_trace: vm.stack_trace.clone(),
+                })
+            }
+        }),
+    );
+}
+
+fn op_begin_scope(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let slots = vm.frame().slots();
+    // REVIEW: Maybe we should created a method/function for that.
+    vm.scope = Rc::new(Scope::new(Rc::clone(&vm.scope)));
+    for (key, object) in &slots {
+        vm.scope.set_symbol(key, object.clone());
+    }
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_end_scope(vm: &mut Vm) -> Result<(), RuntimeError> {
+    if let Some(parent) = &vm.scope.parent {
+        vm.scope = Rc::clone(&parent);
+    }
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_load_constant(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let constant = vm.chunk().constant(vm.frame().instructions_ptr).unwrap();
+    vm.constant_stack.push(constant.clone());
+    vm.frame_mut().instructions_ptr += 4; // 1 + constant size
+    Ok(())
+}
+
+fn op_convert_constant(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let constant = vm.constant_stack.pop().unwrap();
+    match constant {
+        Constant::Nil => {
+            let instance = vm.memory.alloc(Object::Primitive(Primitive::new(0, 0.0)));
+            vm.object_stack.push(instance);
+        }
+        Constant::Bool(value) => {
+            let instance = vm.memory.alloc(Object::Primitive(Primitive::new(
+                1,
+                if value { 1.0 } else { 0.0 },
+            )));
+            vm.object_stack.push(instance);
+        }
+        Constant::Number(value) => {
+            let instance = vm.memory.alloc(Object::Primitive(Primitive::new(2, value)));
+            vm.object_stack.push(instance);
+        }
+        _ => panic!("Cannot convert to a value"),
+    }
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_declare_var(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let object = vm.object_stack.pop().unwrap();
+    let var_name = vm.constant_stack.pop().unwrap();
+    if let Constant::String(var_name) = var_name {
+        vm.scope.set_symbol(&var_name, object);
+    }
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_declare_class(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let class_name = vm.constant_stack.pop().unwrap();
+    if let Constant::String(class_name) = class_name {
+        let class = Object::Class(Class::new(&class_name));
+        let id = vm.memory.alloc(class);
+        vm.scope.set_symbol(&class_name, id);
+        vm.object_stack.push(id);
+        vm.frame_mut().instructions_ptr += 1;
+    }
+    Ok(())
+}
+
+fn op_instantiate(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let fields_count = vm.constant_stack.pop().unwrap();
+    let mut fields = HashMap::new();
+    if let Constant::Size(fields_count) = fields_count {
+        let mut fields_count = fields_count as i16;
+        while fields_count > 0 {
+            let field_name = vm.constant_stack.pop().unwrap();
+            let field_value = vm.object_stack.pop().unwrap();
+            if let Constant::String(field_name) = field_name {
+                fields.insert(field_name, field_value);
+            }
+            fields_count -= 1;
+        }
+    }
+    let class_id = vm.object_stack.pop().unwrap();
+    let class_object = vm.memory.get(class_id);
+    if let Object::Class(_) = class_object {
+        let instance = Object::Instance(Instance::new(class_id, fields));
+        let instance_id = vm.memory.alloc(instance);
+        vm.object_stack.push(instance_id);
+    } else {
+        let index = vm.frame().instructions_ptr;
+        let span = vm.chunk().span(index);
+        return Err(RuntimeError::InvalidInstantiation {
+            span: span.clone(),
+            stack_trace: vm.stack_trace.clone(),
+        });
+    }
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_println(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let object = vm.object_stack.pop().unwrap();
+    match vm.memory.get(object) {
+        Object::Class(class) => {
+            println!("<class {}>", class.name());
+        }
+        Object::Primitive(primitive) => {
+            println!("{:?}", primitive.value());
+        }
+        Object::Function(_) => {
+            println!("<function>");
+        }
+        Object::Instance(instance) => {
+            let class = vm.memory.get(instance.class());
+            if let Object::Class(class) = class {
+                println!("<instance {}>", class.name());
+            }
+        }
+    }
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_get_symbol(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let symbol_name = vm.constant_stack.pop().unwrap();
+    if let Constant::String(symbol_name) = symbol_name {
+        if let Some(object) = vm.scope.symbol(&symbol_name) {
+            vm.object_stack.push(object);
+        } else {
+            let index = vm.frame().instructions_ptr;
+            let span = vm.chunk().span(index);
+            return Err(RuntimeError::SymbolNotFound {
+                symbol_name,
+                span: span.clone(),
+                stack_trace: vm.stack_trace.clone(),
+            });
+        }
+    }
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_set_var(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let object = vm.object_stack.pop().unwrap();
+    let var_name = vm.constant_stack.pop().unwrap();
+    if let Constant::String(var_name) = var_name {
+        vm.scope.assign_symbol(&var_name, object.clone());
+    }
+    vm.object_stack.push(object);
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_return(vm: &mut Vm) -> Result<(), RuntimeError> {
+    if let Some(return_scope) = vm.frame().return_scope() {
+        vm.scope = Rc::clone(&return_scope);
+    }
+    vm.call_stack.pop();
+    vm.stack_trace.pop();
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_set_property(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let object = vm.object_stack.pop().unwrap();
+    let value = vm.object_stack.pop().unwrap();
+    let prop_name = vm.constant_stack.pop().unwrap();
+    if let Constant::String(var_name) = prop_name {
+        if let Object::Instance(instance) = vm.memory.get_mut(object) {
+            instance.set_field(&var_name, value);
+        }
+    }
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_get_property(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let prop_name = vm.constant_stack.pop().unwrap();
+    let instance_id = vm.object_stack.pop().unwrap();
+    let instance = vm.memory.get(instance_id);
+    if let Constant::String(prop_name) = prop_name {
+        match instance {
+            Object::Instance(instance) => {
+                if let Some(prop) = instance.field(&prop_name) {
+                    vm.object_stack.push(prop);
+                } else if let Some(method) = vm.scope.method(instance.class(), &prop_name) {
+                    vm.object_stack.push(instance_id);
+                    vm.object_stack.push(method);
+                } else {
+                    let index = vm.frame().instructions_ptr;
+                    let span = vm.chunk().span(index);
+                    let class = vm.memory.get(instance.class());
+                    if let Object::Class(class) = class {
+                        return Err(RuntimeError::CannotReadProperty {
+                            property_name: span.source_text(),
+                            class_name: class.name(),
+                            span: span.clone(),
+                            stack_trace: vm.stack_trace.clone(),
+                        });
+                    }
+                }
+            }
+            Object::Primitive(instance) => {
+                if let Some(method) = vm.scope.method(instance.class(), &prop_name) {
+                    vm.object_stack.push(instance_id);
+                    vm.object_stack.push(method);
+                } else {
+                    let index = vm.frame().instructions_ptr;
+                    let span = vm.chunk().span(index);
+                    let class = vm.memory.get(instance.class());
+                    if let Object::Class(class) = class {
+                        return Err(RuntimeError::CannotReadProperty {
+                            property_name: span.source_text(),
+                            class_name: class.name(),
+                            span: span.clone(),
+                            stack_trace: vm.stack_trace.clone(),
+                        });
+                    }
+                }
+            }
+            Object::Class(class) => {
+                let index = vm.frame().instructions_ptr;
+                let span = vm.chunk().span(index);
+                return Err(RuntimeError::CannotReadProperty {
+                    property_name: span.source_text(),
+                    class_name: class.name(),
+                    span: span.clone(),
+                    stack_trace: vm.stack_trace.clone(),
+                });
+            }
+            Object::Function(_) => {
+                let index = vm.frame().instructions_ptr;
+                let span = vm.chunk().span(index);
+                return Err(RuntimeError::CannotReadProperty {
+                    property_name: span.source_text(),
+                    class_name: "Function".to_owned(),
+                    span: span.clone(),
+                    stack_trace: vm.stack_trace.clone(),
+                });
+            }
+        }
+    }
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
+}
+
+fn op_declare_function(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let function_name = vm.constant_stack.pop().unwrap();
+    let params_count = vm.constant_stack.pop().unwrap();
+    let mut params = vec![];
+    if let Constant::Size(params_count) = params_count {
+        for _ in 0..params_count {
+            let param_name = vm.constant_stack.pop().unwrap();
+            if let Constant::String(param_name) = param_name {
+                params.push(param_name);
+            }
+        }
+    }
+    let start = vm.constant_stack.pop().unwrap();
+    let end = vm.constant_stack.pop().unwrap();
+    if let (Constant::String(function_name), Constant::Size(start), Constant::Size(end)) =
+        (function_name, start, end)
+    {
+        let object = Object::Function(Function::new(
+            &function_name,
+            &params,
+            None,
+            InnerFunction::frame(Rc::clone(&vm.scope), start..end),
+        ));
+        let object_id = vm.memory.alloc(object);
+        vm.object_stack.push(object_id);
+        vm.scope.set_symbol(&function_name, object_id);
+        vm.frame_mut().instructions_ptr = end;
+    }
+    Ok(())
+}
+
+fn op_declare_method(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let method_name = vm.constant_stack.pop().unwrap();
+    let params_count = vm.constant_stack.pop().unwrap();
+    let mut params = vec![];
+    if let Constant::Size(params_count) = params_count {
+        for _ in 0..params_count {
+            let param_name = vm.constant_stack.pop().unwrap();
+            if let Constant::String(param_name) = param_name {
+                params.push(param_name);
+            }
+        }
+    }
+    let start = vm.constant_stack.pop().unwrap();
+    let end = vm.constant_stack.pop().unwrap();
+    let class_name = vm.constant_stack.pop().unwrap();
+    if let (
+        Constant::String(class_name),
+        Constant::String(method_name),
+        Constant::Size(start),
+        Constant::Size(end),
+    ) = (class_name, method_name, start, end)
+    {
+        if let Some(class) = vm.scope.symbol(&class_name) {
+            let method_id = vm.memory.alloc(Object::Function(Function::new(
+                &method_name,
+                &params,
+                Some(class),
+                InnerFunction::Frame {
+                    scope: Rc::clone(&vm.scope),
+                    range: start..end,
+                },
+            )));
+            vm.scope.set_method(class, &method_name, method_id);
+            vm.frame_mut().instructions_ptr = end;
+        } else {
+            let index = vm.frame().instructions_ptr;
+            let span = vm.chunk().span(index);
+            return Err(RuntimeError::SymbolNotFound {
+                symbol_name: span.source_text(),
+                span: span.clone(),
+                stack_trace: vm.stack_trace.clone(),
+            });
+        }
+    } else {
+        panic!("Cannot convert constants");
+    }
+    Ok(())
+}
+
+fn op_call_function(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let mut args = vec![];
+    let args_count = vm.constant_stack.pop().unwrap();
+    if let Constant::Size(args_count) = args_count {
+        let mut args_count = args_count as i16;
+        while args_count > 0 {
+            let arg = vm.object_stack.pop().unwrap();
+            args.push(arg);
+            args_count -= 1;
+        }
+    }
+    let callee_id = vm.object_stack.pop().unwrap();
+    call_function(vm, &args, callee_id)
+}
+
+fn op_add(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let operand2 = vm.object_stack.pop().unwrap();
+    let operand1 = *vm.object_stack.last().unwrap();
+    let object1 = vm.memory.get(operand1);
+    if let Some(class_id) = object1.class_id() {
+        if let Some(method) = vm.scope.method(class_id, "add") {
+            call_function(vm, &[operand2], method)
+        } else {
+            let index = vm.frame().instructions_ptr;
+            let span = vm.chunk().span(index);
+            Err(RuntimeError::Custom {
+                message: "trait \"add\" not implemented".to_owned(),
+                span: span.clone(),
+                stack_trace: vm.stack_trace.clone(),
+            })
+        }
+    } else {
+        let index = vm.frame().instructions_ptr;
+        let span = vm.chunk().span(index);
+        Err(RuntimeError::Custom {
+            message: "trait \"add\" not implemented".to_owned(),
+            span: span.clone(),
+            stack_trace: vm.stack_trace.clone(),
+        })
+    }
+}
+
+fn call_function(vm: &mut Vm, args: &[usize], callee_id: usize) -> Result<(), RuntimeError> {
+    if let Object::Function(function) = vm.memory.get(callee_id) {
+        let mut symbols = HashMap::new();
+        for (index, arg) in args[..function.params().len()].iter().enumerate() {
+            symbols.insert(function.params()[index].clone(), arg.clone());
+        }
+        if let Some(class_id) = function.class() {
+            let instance = vm.object_stack.pop().unwrap();
+            symbols.insert("this".to_owned(), instance);
+            symbols.insert("This".to_owned(), class_id);
+        }
+        let class = function.class().map(|class_id| vm.memory.get(class_id));
+        match function.inner() {
+            InnerFunction::Frame { range, scope } => {
+                let frame = CallFrame::new(Some(Rc::clone(&vm.scope)), symbols);
+                let index = vm.frame().instructions_ptr;
+                let span = vm.chunk().span(index);
+                if let Some(class) = class {
+                    if let Object::Class(class) = class {
+                        vm.stack_trace.push(Trace::new(
+                            span.clone(),
+                            Some(TraceFunction::new(&function.name(), Some(&class.name()))),
+                        ));
+                    }
+                } else {
+                    vm.stack_trace.push(Trace::new(
+                        span.clone(),
+                        Some(TraceFunction::new(&function.name(), None)),
+                    ));
+                }
+                vm.call_stack.push(frame);
+                vm.scope = Rc::clone(&scope);
+                vm.frame_mut().instructions_ptr = range.start;
+            }
+            InnerFunction::Native { fun } => {
+                let object = (fun)(vm, symbols)?;
+                let object_id = vm.memory.alloc(object);
+                vm.object_stack.push(object_id);
+                vm.frame_mut().instructions_ptr += 1;
+            }
+        }
+        Ok(())
+    } else {
+        let index = vm.frame().instructions_ptr;
+        let span = vm.chunk().span(index);
+        Err(RuntimeError::SymbolNotCallable {
+            symbol_name: span.source_text(),
+            span: span.clone(),
+            stack_trace: vm.stack_trace.clone(),
+        })
+    }
+}

@@ -94,7 +94,6 @@ impl Emitter for Stmt {
                 chunk.add_constant(Constant::Str(r#const.ident().source_text()));
                 chunk.add_bytecode(Bytecode::DeclareVar);
             }
-
             Self::Class(class) => {
                 chunk.add_constant(Constant::Str(class.ident().span().source_text()));
                 chunk.add_bytecode(Bytecode::DeclareClass);

@@ -1,62 +1,27 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, fmt::Debug, ops::Range, rc::Rc};
 
-use crate::{runtime_error::RuntimeError, scope::Scope};
+use crate::{runtime_error::RuntimeError, scope::Scope, vm::Vm};
 
-pub(crate) trait FromPtr<T> {
-    fn from_ptr(&self) -> &T;
-}
-
-pub(crate) trait FromMut<T> {
-    fn from_mut(&self) -> &mut T;
-}
-
-pub(crate) trait ToPtr<T> {
-    fn to_ptr(&self) -> *const T;
-
-    fn to_mut(&mut self) -> *mut T;
-}
-
-impl<T> ToPtr<T> for Box<T> {
-    fn to_ptr(&self) -> *const T {
-        self.as_ref() as *const T
-    }
-
-    fn to_mut(&mut self) -> *mut T {
-        self.as_mut() as *mut T
-    }
-}
-
-impl<T> FromPtr<T> for *const T {
-    fn from_ptr(&self) -> &T {
-        unsafe { &*(*self) }
-    }
-}
-
-impl<T> FromMut<T> for *mut T {
-    fn from_mut(&self) -> &mut T {
-        unsafe { &mut *(*self) }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 pub(crate) enum Object {
-    Class(*const Class),
-    Primitive(*const Primitive),
-    Instance(*mut Instance),
-    Function(*const Function),
-    Method(*const Method),
+    Class(Class),
+    Primitive(Primitive),
+    Instance(Instance),
+    Function(Function),
 }
 
 impl Object {
-    pub(crate) fn class_ptr(&self) -> Option<*const Class> {
+    pub(crate) fn class_id(&self) -> Option<usize> {
         match self {
-            Self::Instance(instance) => Some(instance.from_mut().class),
-            Self::Primitive(primitive) => Some(primitive.from_ptr().class),
-            _ => None,
+            Self::Class(_) => None,
+            Self::Function(_) => None,
+            Self::Instance(instance) => Some(instance.class),
+            Self::Primitive(primitive) => Some(primitive.class),
         }
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct Class {
     name: String,
 }
@@ -73,15 +38,43 @@ impl Class {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
+pub(crate) struct Instance {
+    class: usize,
+    fields: HashMap<String, usize>,
+}
+
+impl Instance {
+    pub(crate) fn new(class: usize, fields: HashMap<String, usize>) -> Self {
+        Self { class, fields }
+    }
+
+    pub(crate) fn class(&self) -> usize {
+        self.class
+    }
+
+    pub(crate) fn field(&self, key: &str) -> Option<usize> {
+        self.fields.get(key).map(|value| *value)
+    }
+
+    pub(crate) fn set_field(&mut self, key: &str, value: usize) {
+        self.fields.insert(key.to_owned(), value);
+    }
+}
+
+#[derive(Debug)]
 pub(crate) struct Primitive {
-    class: *const Class,
+    class: usize,
     value: f64,
 }
 
 impl Primitive {
-    pub(crate) fn new(class: *const Class, value: f64) -> Self {
+    pub(crate) fn new(class: usize, value: f64) -> Self {
         Self { class, value }
+    }
+
+    pub(crate) fn class(&self) -> usize {
+        self.class
     }
 
     pub(crate) fn value(&self) -> f64 {
@@ -89,103 +82,74 @@ impl Primitive {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct Instance {
-    class: *const Class,
-    fields: HashMap<String, Object>,
+#[derive(Debug)]
+pub(crate) struct Function {
+    name: String,
+    params: Vec<String>,
+    class: Option<usize>,
+    inner: InnerFunction,
 }
 
-impl Instance {
-    pub fn new(class: *const Class, fields: HashMap<String, Object>) -> Self {
-        Self { class, fields }
-    }
+pub(crate) type NativeFunction =
+    Box<dyn Fn(&Vm, HashMap<String, usize>) -> Result<Object, RuntimeError>>;
 
-    pub fn class(&self) -> &Class {
-        self.class.from_ptr()
-    }
-
-    pub fn field(&self, ident: &str) -> Option<&Object> {
-        self.fields.get(ident)
-    }
-
-    pub fn set_field(&mut self, ident: &str, value: Object) {
-        self.fields.insert(ident.to_owned(), value);
-    }
-}
-
-pub(crate) struct Method {
-    this: Object,
-    function: *const Function,
-}
-
-impl Method {
-    pub(crate) fn new(this: Object, function: *const Function) -> Self {
-        Self { this, function }
-    }
-
-    pub(crate) fn this(&self) -> &Object {
-        &self.this
-    }
-
-    pub(crate) fn function(&self) -> &Function {
-        self.function.from_ptr()
-    }
-}
-
-pub(crate) enum Function {
-    Default {
-        scope: Rc<Scope>,
-        name: String,
-        params: Vec<String>,
-        start: usize,
-        end: usize,
-    },
+pub(crate) enum InnerFunction {
     Native {
-        name: String,
-        params: Vec<String>,
-        fun: Box<dyn Fn(HashMap<String, Object>) -> Result<Object, RuntimeError>>,
+        fun: NativeFunction,
     },
+    Frame {
+        scope: Rc<Scope>,
+        range: Range<usize>,
+    },
+}
+
+impl Debug for InnerFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Native { .. } => f.debug_struct("Native").finish(),
+            Self::Frame { scope, range } => f
+                .debug_struct("Frame")
+                .field("scope", scope)
+                .field("range", range)
+                .finish(),
+        }
+    }
 }
 
 impl Function {
-    pub(crate) fn default(
-        scope: Rc<Scope>,
+    pub(crate) fn new(
         name: &str,
-        start: usize,
-        end: usize,
         params: &[String],
+        class: Option<usize>,
+        inner: InnerFunction,
     ) -> Self {
-        Self::Default {
-            scope,
+        Self {
             name: name.to_owned(),
             params: params.to_vec(),
-            start,
-            end,
-        }
-    }
-
-    pub(crate) fn native<F>(name: &str, params: &[String], fun: F) -> Self
-    where
-        F: 'static + Fn(HashMap<String, Object>) -> Result<Object, RuntimeError>,
-    {
-        Self::Native {
-            name: name.to_owned(),
-            params: params.to_vec(),
-            fun: Box::new(fun),
+            class,
+            inner,
         }
     }
 
     pub(crate) fn name(&self) -> String {
-        match self {
-            Self::Native { name, .. } => name.clone(),
-            Self::Default { name, .. } => name.clone(),
-        }
+        self.name.clone()
     }
 
     pub(crate) fn params(&self) -> &Vec<String> {
-        match self {
-            Self::Native { params, .. } => params,
-            Self::Default { params, .. } => params,
-        }
+        &self.params
+    }
+
+    pub(crate) fn inner(&self) -> &InnerFunction {
+        &self.inner
+    }
+
+    pub(crate) fn class(&self) -> Option<usize> {
+        self.class
+    }
+}
+
+impl InnerFunction {
+    pub(crate) fn frame(scope: Rc<Scope>, range: Range<usize>) -> Self {
+        Self::Frame { scope, range }
     }
 }

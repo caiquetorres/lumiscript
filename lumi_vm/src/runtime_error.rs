@@ -3,11 +3,14 @@ use std::fmt::Display;
 use colored::Colorize;
 use lumi_lxr::span::Span;
 
-use crate::frame::Trace;
-
-type StackTrace = Vec<Trace>;
+use crate::stack_trace::StackTrace;
 
 pub enum RuntimeError {
+    Custom {
+        message: String,
+        span: Span,
+        stack_trace: StackTrace,
+    },
     SymbolNotFound {
         symbol_name: String,
         span: Span,
@@ -20,8 +23,6 @@ pub enum RuntimeError {
         stack_trace: StackTrace,
     },
     InvalidBinaryOperands {
-        type_name_left: String,
-        type_name_right: String,
         span: Span,
         stack_trace: StackTrace,
     },
@@ -31,7 +32,6 @@ pub enum RuntimeError {
         stack_trace: StackTrace,
     },
     InvalidInstantiation {
-        symbol_name: String,
         span: Span,
         stack_trace: StackTrace,
     },
@@ -40,6 +40,7 @@ pub enum RuntimeError {
 impl RuntimeError {
     fn message(&self) -> String {
         match self {
+            Self::Custom { message, .. } => message.clone(),
             Self::SymbolNotFound { symbol_name, .. } => {
                 format!("symbol \"{}\" was not found", symbol_name)
             }
@@ -48,28 +49,22 @@ impl RuntimeError {
                 property_name,
                 ..
             } => format!(
-                "cannot read property \"{}\" of instance of \"{}\"",
+                "cannot read property \"{}\" of \"{}\"",
                 property_name, class_name
             ),
-            Self::InvalidBinaryOperands {
-                type_name_left,
-                type_name_right,
-                ..
-            } => format!(
-                "invalid operands to binary expression (\"{}\" and \"{}\")",
-                type_name_left, type_name_right
-            ),
+            Self::InvalidBinaryOperands { .. } => format!("invalid operands to binary expression",),
             Self::SymbolNotCallable { symbol_name, .. } => {
-                format!("instance of type \"{}\" is not callable", symbol_name)
+                format!("symbol \"{}\" is not a function", symbol_name)
             }
-            Self::InvalidInstantiation { symbol_name, .. } => {
-                format!("symbol \"{}\" cannot be instantiated", symbol_name)
+            Self::InvalidInstantiation { .. } => {
+                format!("only classes can be instantiated")
             }
         }
     }
 
     fn span(&self) -> Span {
         match self {
+            Self::Custom { span, .. } => span.clone(),
             Self::SymbolNotFound { span, .. } => span.clone(),
             Self::CannotReadProperty { span, .. } => span.clone(),
             Self::InvalidBinaryOperands { span, .. } => span.clone(),
@@ -80,6 +75,7 @@ impl RuntimeError {
 
     fn stack_trace(&self) -> &StackTrace {
         match self {
+            Self::Custom { stack_trace, .. } => stack_trace,
             Self::SymbolNotFound { stack_trace, .. } => stack_trace,
             Self::CannotReadProperty { stack_trace, .. } => stack_trace,
             Self::InvalidBinaryOperands { stack_trace, .. } => stack_trace,
@@ -130,23 +126,27 @@ impl Display for RuntimeError {
                 line,
                 column
             );
-            if let Some(class_name) = trace.class_name.clone() {
-                output.push_str(&format!(
-                    "\n{} {}.{} {}",
-                    "at".black(),
-                    class_name,
-                    trace.function_name.underline(),
-                    function_and_file.black()
-                ))
+            if let Some(function) = trace.function() {
+                if let Some(class_name) = function.class_name() {
+                    output.push_str(&format!(
+                        "\n{} {}.{} {}",
+                        "at".black(),
+                        class_name,
+                        function.name().underline(),
+                        function_and_file.black()
+                    ))
+                } else {
+                    output.push_str(&format!(
+                        "\n{} {} {}",
+                        "at".black(),
+                        function.name().underline(),
+                        function_and_file.black()
+                    ));
+                }
             } else {
-                output.push_str(&format!(
-                    "\n{} {} {}",
-                    "at".black(),
-                    trace.function_name.underline(),
-                    function_and_file.black()
-                ));
+                output.push_str(&format!("\n{} {}", "at".black(), function_and_file.black()));
             }
-            prev_span = trace.span.clone();
+            prev_span = trace.span();
         }
         let line = prev_span.start().line();
         let column = prev_span.start().column();

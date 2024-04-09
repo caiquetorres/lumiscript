@@ -1,13 +1,12 @@
 use std::time::Instant;
 
 use clap::Parser;
-use colored::Colorize;
-use lumi_bc_e::emitter::BytecodeEmitter;
 use lumi_lxr::lexer::Lexer;
 use lumi_lxr::source_code::SourceCode;
 use lumi_psr::ast::Ast;
 use lumi_psr::parser::ParseStream;
-use lumi_vm::VirtualMachine;
+use lumi_vm::emitter::BytecodeEmitter;
+use lumi_vm::vm::Vm;
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -35,13 +34,14 @@ fn main() {
                         "Compilation time",
                         (Instant::now() - start_compilation_time).as_millis()
                     );
-                    println!(
-                        "{}: {}\n",
-                        "Chunk size",
-                        format!("{:.2} kB", chunk.size()).bold().green()
-                    );
+                    // println!(
+                    //     "{}: {}\n",
+                    //     "Chunk size",
+                    //     format!("{:.2} kB", chunk.size()).bold().green()
+                    // );
                     let start_execution_time = Instant::now();
-                    match VirtualMachine::run(chunk) {
+                    let mut vm = Vm::new(chunk);
+                    match vm.run() {
                         Ok(_) => {}
                         Err(runtime_error) => {
                             eprintln!("{}", runtime_error);
