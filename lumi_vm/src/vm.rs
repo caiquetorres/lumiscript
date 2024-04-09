@@ -57,6 +57,7 @@ impl Vm {
                 Bytecode::Add => op_add(self)?,
                 Bytecode::Subtract => op_sub(self)?,
                 Bytecode::Equals => op_eq(self)?,
+                Bytecode::Not => op_not(self)?,
                 Bytecode::JumpIfFalse => op_jump_if_false(self)?,
                 _ => panic!("Bytecode {:?} not implemented", instruction),
             };
@@ -108,15 +109,17 @@ impl Vm {
     }
 
     fn current_instruction(&self) -> Option<Bytecode> {
-        self.chunk.instruction(self.frame().instructions_ptr)
+        self.chunk().instruction(self.frame().instructions_ptr)
     }
 }
 
 fn register(vm: &mut Vm) {
-    vm.memory.alloc(Object::Class(Class::new("Nil")));
-    vm.memory.alloc(Object::Class(Class::new("Bool")));
-    vm.memory.alloc(Object::Class(Class::new("Number")));
-
+    let nil_ptr = vm.memory.alloc(Object::Class(Class::new("Nil")));
+    let bool_ptr = vm.memory.alloc(Object::Class(Class::new("Bool")));
+    let num_ptr = vm.memory.alloc(Object::Class(Class::new("Number")));
+    vm.scope.set_symbol("Nil", nil_ptr);
+    vm.scope.set_symbol("Bool", bool_ptr);
+    vm.scope.set_symbol("Num", num_ptr);
     let start = Instant::now();
     vm.register_native_function(
         "clock",
@@ -181,7 +184,7 @@ fn register(vm: &mut Vm) {
     vm.register_native_method(
         2,
         "eq",
-        &vec!["other".to_owned()],
+        &["other".to_owned()],
         Box::new(|vm, params| {
             let this = *params.get("this").unwrap();
             let other = *params.get("other").unwrap();
@@ -203,6 +206,24 @@ fn register(vm: &mut Vm) {
                     span: span.clone(),
                     stack_trace: vm.stack_trace.clone(),
                 })
+            }
+        }),
+    );
+
+    vm.register_native_method(
+        1,
+        "not",
+        &[],
+        Box::new(|vm, params| {
+            let this = *params.get("this").unwrap();
+            let this = vm.memory.get(this);
+            if let Object::Primitive(primitive) = this {
+                Ok(Object::Primitive(Primitive::new(
+                    1,
+                    if primitive.value() == 0.0 { 1.0 } else { 0.0 },
+                )))
+            } else {
+                unreachable!()
             }
         }),
     );
@@ -296,20 +317,28 @@ fn op_instantiate(vm: &mut Vm) -> Result<(), RuntimeError> {
     }
     let class_id = vm.object_stack.pop().unwrap();
     let class_object = vm.memory.get(class_id);
-    if let Object::Class(_) = class_object {
+    if class_id == 0 || class_id == 1 || class_id == 2 {
+        let index = vm.frame().instructions_ptr;
+        let span = vm.chunk().span(index);
+        Err(RuntimeError::Custom {
+            message: "cannot instantiate a primitive type".to_owned(),
+            span: span.clone(),
+            stack_trace: vm.stack_trace.clone(),
+        })
+    } else if let Object::Class(_) = class_object {
         let instance = Object::Instance(Instance::new(class_id, fields));
         let instance_id = vm.memory.alloc(instance);
         vm.object_stack.push(instance_id);
+        vm.frame_mut().instructions_ptr += 1;
+        Ok(())
     } else {
         let index = vm.frame().instructions_ptr;
         let span = vm.chunk().span(index);
-        return Err(RuntimeError::InvalidInstantiation {
+        Err(RuntimeError::InvalidInstantiation {
             span: span.clone(),
             stack_trace: vm.stack_trace.clone(),
-        });
+        })
     }
-    vm.frame_mut().instructions_ptr += 1;
-    Ok(())
 }
 
 fn op_println(vm: &mut Vm) -> Result<(), RuntimeError> {
@@ -634,6 +663,47 @@ fn op_eq(vm: &mut Vm) -> Result<(), RuntimeError> {
     }
 }
 
+fn op_not(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let object_id = *vm.object_stack.last().unwrap();
+    let object = vm.memory.get(object_id);
+    if let Some(class_id) = object.class_id() {
+        if let Some(method) = vm.scope.method(class_id, "not") {
+            call_function(vm, &[], method)
+        } else {
+            let index = vm.frame().instructions_ptr;
+            let span = vm.chunk().span(index);
+            Err(RuntimeError::Custom {
+                message: "trait \"Not\" not implemented".to_owned(),
+                span: span.clone(),
+                stack_trace: vm.stack_trace.clone(),
+            })
+        }
+    } else {
+        let index = vm.frame().instructions_ptr;
+        let span = vm.chunk().span(index);
+        Err(RuntimeError::Custom {
+            message: "trait \"Not\" not implemented".to_owned(),
+            span: span.clone(),
+            stack_trace: vm.stack_trace.clone(),
+        })
+    }
+}
+
+fn op_jump_if_false(vm: &mut Vm) -> Result<(), RuntimeError> {
+    let offset = vm.constant_stack.pop().unwrap();
+    let object_id = vm.object_stack.pop().unwrap();
+    if let Object::Primitive(primitive) = vm.memory.get(object_id) {
+        if primitive.value() == 0.0 {
+            if let Constant::Size(offset) = offset {
+                vm.frame_mut().instructions_ptr += offset + 1;
+            }
+        } else {
+            vm.frame_mut().instructions_ptr += 1;
+        }
+    }
+    Ok(())
+}
+
 fn call_function(vm: &mut Vm, args: &[usize], callee_id: usize) -> Result<(), RuntimeError> {
     if let Object::Function(function) = vm.memory.get(callee_id) {
         let mut symbols = HashMap::new();
@@ -685,19 +755,4 @@ fn call_function(vm: &mut Vm, args: &[usize], callee_id: usize) -> Result<(), Ru
             stack_trace: vm.stack_trace.clone(),
         })
     }
-}
-
-fn op_jump_if_false(vm: &mut Vm) -> Result<(), RuntimeError> {
-    let offset = vm.constant_stack.pop().unwrap();
-    let object_id = vm.object_stack.pop().unwrap();
-    if let Object::Primitive(primitive) = vm.memory.get(object_id) {
-        if primitive.value() == 0.0 {
-            if let Constant::Size(offset) = offset {
-                vm.frame_mut().instructions_ptr += offset + 1;
-            }
-        } else {
-            vm.frame_mut().instructions_ptr += 1;
-        }
-    }
-    Ok(())
 }

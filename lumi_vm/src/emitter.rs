@@ -13,10 +13,8 @@ pub(crate) trait Emitter {
 pub struct BytecodeEmitter;
 
 impl BytecodeEmitter {
-    pub fn emit(ast: &Ast) -> Chunk {
-        let mut chunk = Chunk::new();
-        ast.emit(&mut chunk);
-        chunk
+    pub fn emit(ast: &Ast, chunk: &mut Chunk) {
+        ast.emit(chunk);
     }
 }
 

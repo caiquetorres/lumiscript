@@ -1,23 +1,9 @@
 trait Eq {
-    fun eq(other: This) -> bool;
-}
-
-impl Eq for Num {
-    extern fun eq(other: This) -> bool;
+    fun eq(other: This) -> Bool;
 }
 
 trait ToBool {
-    fun toBool() -> bool;
-}
-
-impl ToBool for Bool {
-    extern fun toBool() -> Bool;
-}
-
-impl ToBool for Num {
-    fun toBool() -> Bool {
-        return this != 0;
-    }
+    fun toBool() -> Bool;
 }
 
 trait Add {
@@ -26,6 +12,16 @@ trait Add {
 
 trait Sub {
     fun sub(other: This) -> This;
+}
+
+impl Eq for Num {
+    extern fun eq(other: This) -> Bool;
+}
+
+impl ToBool for Num {
+    fun toBool() -> Bool {
+        return this != 0;
+    }
 }
 
 impl Add for Num {

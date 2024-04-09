@@ -1,5 +1,5 @@
 mod call_frame;
-mod chunk;
+pub mod chunk;
 pub mod emitter;
 mod memory;
 mod object;

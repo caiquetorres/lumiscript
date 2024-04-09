@@ -73,7 +73,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             instructions: vec![],
             constant_pool: vec![],
