@@ -1,11 +1,3 @@
-trait Add {
-    fun add(other: This) -> This;
-}
-
-impl Add for Num {
-    extern fun add(other: This) -> This;
-}
-
 class Point {
     x: Num,
     y: Num
