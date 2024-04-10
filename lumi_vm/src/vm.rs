@@ -94,8 +94,12 @@ impl Vm {
                 Bytecode::Equals => op_eq(self)?,
                 Bytecode::Not => op_not(self)?,
                 Bytecode::JumpIfFalse => op_jump_if_false(self)?,
+                Bytecode::Pop => op_pop(self)?,
                 _ => panic!("Bytecode {:?} not implemented", instruction),
             };
+        }
+        if !self.object_stack.is_empty() {
+            println!("Stack not empty, {:?}", self.object_stack);
         }
         Ok(())
     }
@@ -321,7 +325,8 @@ fn op_declare_var(vm: &mut Vm) -> Result<(), RuntimeError> {
 
 fn op_declare_class(vm: &mut Vm) -> Result<(), RuntimeError> {
     let class_name = vm.pop_constant().as_string();
-    let (class_id, _) = vm.create_object(Object::Class(Class::new(&class_name)));
+    let class = Object::Class(Class::new(&class_name));
+    let class_id = vm.memory.alloc(class);
     vm.scope.set_symbol(&class_name, class_id);
     vm.frame_mut().instructions_ptr += 1;
     Ok(())
@@ -768,4 +773,10 @@ fn call_function(vm: &mut Vm, args: &[usize], callee_id: usize) -> Result<(), Ru
             stack_trace: vm.stack_trace.clone(),
         })
     }
+}
+
+fn op_pop(vm: &mut Vm) -> Result<(), RuntimeError> {
+    vm.pop_object();
+    vm.frame_mut().instructions_ptr += 1;
+    Ok(())
 }

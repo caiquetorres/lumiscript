@@ -197,3 +197,27 @@ Currently, the traits that can be implemented are:
 - `Not` - for negations
 
 Keep in mind that I'm working on adding new ones. These basic calculations are just the beginning!
+
+## Error handling
+
+Not everything is smooth sailing, right? Currently, the compiler supports three types of errors: lexical, syntactic, and runtime.
+
+> Type errors will be addressed in the future.
+
+### Lexical Errors
+
+These errors occur when the compiler encounters an invalid character or when it analyzes a char, string, or number in the wrong format. Below, you can see some examples of lexical errors.
+
+![Lexical Error 1](/images/lexical_error_1.png)
+
+### Syntactic Errors
+
+The error shown below demonstrates a syntactic error, which occurs when the order of the tokens is unexpected.
+
+![Parsing Error 1](/images/parsing_error_1.png)
+
+### Runtime Errors
+
+A runtime error occurs when something goes wrong during code execution, also known as execution time. Typically, these errors cannot be detected at compile time. The example below illustrates a runtime error, but note that this example is something that the type checker could detect beforehand. However, since the compiler does not yet have a type checker, the runtime is responsible for detecting it.
+
+![Runtime Error 1](/images/runtime_error_1.png)

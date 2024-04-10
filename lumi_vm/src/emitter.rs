@@ -31,6 +31,7 @@ impl Emitter for Stmt {
         match self {
             Self::Expr(expr) => {
                 expr.expr().emit(chunk);
+                chunk.push_instruction(Bytecode::Pop, expr.span().clone());
             }
             Self::Println(println) => {
                 println.expr().emit(chunk);

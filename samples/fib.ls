@@ -1,19 +1,3 @@
-trait Eq {
-    fun eq(other: This) -> Bool;
-}
-
-impl Eq for Num {
-    extern fun eq(other: This) -> Bool;
-}
-
-trait Add {
-    fun add(other: This) -> This;
-}
-
-impl Add for Num {
-    extern fun add(other: This) -> This;
-}
-
 fun fib(n: Num) -> Num {
     if n == 0 {
         return 0;
